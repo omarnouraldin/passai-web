@@ -31,7 +31,7 @@ export default function HomeView({
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <Mascot pose="idle" size={64} />
+            <Mascot pose="happy" size={64} style={{ borderRadius: 12 }} />
             <div>
               <div className="logo">
                 <span className="logo-pass">{isJapanese ? 'パス' : 'Pass'}</span>

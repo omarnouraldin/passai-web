@@ -12,8 +12,8 @@ export default function ResultsView({ content, furigana, isJapanese, onBack }) {
 
   const [activeTab, setActiveTab] = useState(0);
 
-  // Mascot pose changes per tab
-  const poses = ['happy', 'thinking', 'studying', 'thinking'];
+  // Mascot pose changes per tab: Summary, Topics, Flashcards, Quiz
+  const poses = ['happy', 'thinking', 'front', 'panic'];
 
   return (
     <div className="page">

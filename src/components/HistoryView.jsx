@@ -29,7 +29,7 @@ export default function HistoryView({ history, onOpen, onDelete, onClear, isJapa
       {history.length === 0 ? (
         <div className="empty-state">
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-            <Mascot pose="encouraging" size={100} />
+            <Mascot pose="sleepy" size={100} />
           </div>
           <div className="empty-title">{isJapanese ? '履歴なし' : 'No history yet'}</div>
           <div style={{ fontSize: 14, marginTop: 6 }}>

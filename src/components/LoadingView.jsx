@@ -38,7 +38,7 @@ export default function LoadingView({ isJapanese }) {
         <div className="ring ring-2" />
         <div className="ring ring-3" />
         <div className="sparkle-center" style={{ background: 'none' }}>
-          <Mascot pose="loading" size={88} style={{ boxShadow: '0 0 0 4px rgba(107,96,255,0.35)' }} />
+          <Mascot pose="panic" size={88} style={{ borderRadius: '50%', boxShadow: '0 0 0 4px rgba(107,96,255,0.35)' }} />
         </div>
       </div>
 

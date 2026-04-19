@@ -1,34 +1,24 @@
 /**
  * Mascot component — crops a specific pose from mascot-sheet.png
- *
- * The sheet layout (adjust SHEET_W / SHEET_H / POSES if your image differs):
- *
- *   [app-icon]  [reading]   [thinking]   [notifications]
- *   [logos…]
- *   [idle]  [studying]  [happy]  [encouraging]  [loading]
- *
- * All coordinates are in the ORIGINAL image's pixel space.
+ * Sheet size: 1254×1254px, dark purple background (#1e1b3a)
  */
 
-// ── Tune these if the cat feels off-center ──────────────────────────
-const SHEET_W = 1320;
-const SHEET_H = 900;
+const SHEET_W = 1254;
+const SHEET_H = 1254;
 
+// All coordinates verified by pixel measurement
 const POSES = {
-  idle:        { x: 30,   y: 570, w: 230, h: 280 },
-  studying:    { x: 270,  y: 570, w: 230, h: 280 },
-  happy:       { x: 510,  y: 570, w: 230, h: 280 },
-  encouraging: { x: 750,  y: 570, w: 230, h: 280 },
-  loading:     { x: 990,  y: 570, w: 230, h: 280 },
-  thinking:    { x: 840,  y: 20,  w: 270, h: 340 },
-  reading:     { x: 380,  y: 20,  w: 310, h: 380 },
+  main:     { x: 5,   y: 20,  w: 440, h: 480 }, // large cat with holographic board
+  happy:    { x: 5,   y: 730, w: 180, h: 260 }, // smiling, hands together
+  thinking: { x: 185, y: 730, w: 180, h: 260 }, // curious, question mark
+  panic:    { x: 365, y: 730, w: 180, h: 260 }, // stressed, sweating
+  sleepy:   { x: 545, y: 730, w: 185, h: 260 }, // ZZz, sleeping
+  front:    { x: 445, y: 35,  w: 205, h: 395 }, // clean front-facing pose
 };
-// ────────────────────────────────────────────────────────────────────
 
-export default function Mascot({ pose = 'idle', size = 120, style = {} }) {
-  const p = POSES[pose] ?? POSES.idle;
+export default function Mascot({ pose = 'happy', size = 120, style = {} }) {
+  const p = POSES[pose] ?? POSES.happy;
 
-  // Scale factor so the cropped region fills `size`
   const scale = size / p.w;
 
   const containerStyle = {
@@ -36,8 +26,8 @@ export default function Mascot({ pose = 'idle', size = 120, style = {} }) {
     height: Math.round(p.h * scale),
     overflow: 'hidden',
     flexShrink: 0,
-    borderRadius: '50%',
-    background: '#fff',
+    borderRadius: 14,
+    background: '#1e1b3a',   // matches the sheet's dark purple background
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -45,8 +35,8 @@ export default function Mascot({ pose = 'idle', size = 120, style = {} }) {
   };
 
   const imgStyle = {
-    width:  SHEET_W * scale,
-    height: SHEET_H * scale,
+    width:      SHEET_W * scale,
+    height:     SHEET_H * scale,
     marginLeft: -(p.x * scale),
     marginTop:  -(p.y * scale),
     imageRendering: 'auto',

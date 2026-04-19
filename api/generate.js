@@ -1,16 +1,8 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-dotenv.config();
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-const PORT = process.env.PORT || 3001;
-
-app.post('/api/generate', async (req, res) => {
   const { noteText, language = 'english', furigana = false } = req.body;
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -92,7 +84,6 @@ Rules:
     const data = await response.json();
     const rawText = data.content?.[0]?.text ?? '';
 
-    // Strip markdown code fences Claude sometimes adds despite instructions
     const cleanText = rawText
       .trim()
       .replace(/^```json\s*/im, '')
@@ -100,15 +91,10 @@ Rules:
       .replace(/```\s*$/im, '')
       .trim();
 
-    console.log('Clean text preview:', cleanText.slice(0, 80));
     const parsed = JSON.parse(cleanText);
     res.json(parsed);
   } catch (err) {
     console.error('Generate error:', err);
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
-});
-
-app.listen(PORT, () => {
-  console.log(`✅  PassAI backend running at http://localhost:${PORT}`);
-});
+}

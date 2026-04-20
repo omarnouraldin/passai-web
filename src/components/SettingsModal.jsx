@@ -1,13 +1,36 @@
+import { useTheme } from '../contexts/ThemeContext.jsx';
+
 export default function SettingsModal({
   language, setLanguage,
   furigana, setFurigana,
   isJapanese, onClose,
 }) {
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-sheet" onClick={e => e.stopPropagation()}>
         <div className="modal-handle" />
         <div className="modal-title">{isJapanese ? '設定' : 'Settings'}</div>
+
+        {/* Theme toggle */}
+        <div className="setting-row">
+          <div>
+            <div className="setting-label">{isJapanese ? '表示モード' : 'Appearance'}</div>
+            <div className="setting-sub">{theme === 'dark'
+              ? (isJapanese ? 'ダークモード' : 'Dark mode')
+              : (isJapanese ? 'ライトモード' : 'Light mode')}
+            </div>
+          </div>
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={theme === 'light'}
+              onChange={toggleTheme}
+            />
+            <span className="toggle-track" />
+          </label>
+        </div>
 
         {/* Language */}
         <div className="setting-row">
@@ -19,7 +42,7 @@ export default function SettingsModal({
               className={`seg-btn ${language === 'english' ? 'active' : ''}`}
               onClick={() => setLanguage('english')}
             >
-              English
+              EN
             </button>
             <button
               className={`seg-btn ${language === 'japanese' ? 'active' : ''}`}
@@ -35,7 +58,7 @@ export default function SettingsModal({
           <div className="setting-row">
             <div>
               <div className="setting-label">ふりがな</div>
-              <div className="setting-sub">難しい漢字の上に読み仮名を表示</div>
+              <div className="setting-sub">難しい漢字の読み仮名を表示</div>
             </div>
             <label className="toggle">
               <input

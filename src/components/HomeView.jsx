@@ -2,6 +2,9 @@ import { useState, useRef } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 import SettingsModal from './SettingsModal.jsx';
+import AuthModal from './AuthModal.jsx';
+import { useTheme } from '../contexts/ThemeContext.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 
 // Point pdf.js worker to CDN so no extra bundling is needed
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -32,7 +35,7 @@ async function extractText(file) {
   const ext = file.name.split('.').pop().toLowerCase();
 
   // ── Images → Claude Vision OCR ──
-  if (IMAGE_EXTS.includes(ext)) {
+  if (IMAGE_EXTS.includes(ext) || file.type.startsWith('image/')) {
     const compressed = await compressImage(file);
     const base64 = await new Promise((resolve) => {
       const reader = new FileReader();
@@ -84,11 +87,17 @@ export default function HomeView({
   furigana, setFurigana,
   isJapanese,
 }) {
-  const [noteText, setNoteText]         = useState('');
+  const { theme, toggleTheme } = useTheme();
+  const { user }               = useAuth();
+
+  const [noteText,     setNoteText]     = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [importing, setImporting]       = useState(false);
-  const [importError, setImportError]   = useState(null);
-  const fileRef = useRef(null);
+  const [showAuth,     setShowAuth]     = useState(false);
+  const [importing,    setImporting]    = useState(false);
+  const [importError,  setImportError]  = useState(null);
+
+  const fileRef   = useRef(null);
+  const cameraRef = useRef(null);
 
   const count       = noteText.length;
   const overLimit   = count > charLimit;
@@ -114,41 +123,68 @@ export default function HomeView({
     <>
       <div className="page">
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <img src="/mascot-icon.png" alt="PassAI" style={{ width: 60, height: 60, objectFit: 'contain', borderRadius: 14 }} />
+        <div className="header-row">
+          <div className="header-left">
+            <img
+              src="/mascot-icon.png"
+              alt="PassAI"
+              className="mascot-icon"
+            />
             <div>
               <div className="logo">
                 <span className="logo-pass">{isJapanese ? 'パス' : 'Pass'}</span>
                 <span className="logo-ai">AI</span>
               </div>
               <div className="tagline">
-                {isJapanese ? 'ノートをAIで学習素材に変換' : 'Turn your notes into study material'}
+                {isJapanese ? 'ノートをAIで学習素材に変換' : 'Turn notes into study material'}
               </div>
             </div>
           </div>
-          <button
-            onClick={() => setShowSettings(true)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: 22 }}
-            aria-label="Settings"
-          >
-            ⚙️
-          </button>
+
+          <div className="header-actions">
+            {/* Theme toggle */}
+            <button
+              className="icon-btn"
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+
+            {/* Account button */}
+            <button
+              className="icon-btn"
+              onClick={() => setShowAuth(true)}
+              aria-label="Account"
+              title={user ? user.email : 'Sign in'}
+            >
+              {user ? '👤' : '🔑'}
+            </button>
+
+            {/* Settings */}
+            <button
+              className="icon-btn"
+              onClick={() => setShowSettings(true)}
+              aria-label="Settings"
+            >
+              ⚙️
+            </button>
+          </div>
         </div>
 
-        {/* File import */}
-        <div style={{ marginBottom: 12 }}>
+        {/* File import row */}
+        <div className="import-row">
+          {/* File picker */}
           <button
-            className="btn btn-ghost"
-            style={{ height: 40, fontSize: 13 }}
+            className="import-btn"
             onClick={() => fileRef.current.click()}
             disabled={importing}
           >
             {importing
               ? (isJapanese ? '読み込み中...' : 'Reading...')
-              : `📄 ${isJapanese ? 'ファイルをインポート' : 'Import file'}`}
+              : `📄 ${isJapanese ? 'ファイル' : 'Import file'}`}
           </button>
-          {/* Accept PDF, Word, and plain text files */}
           <input
             ref={fileRef}
             type="file"
@@ -156,8 +192,27 @@ export default function HomeView({
             style={{ display: 'none' }}
             onChange={handleFile}
           />
+
+          {/* Camera (photo capture — shows naturally on mobile) */}
+          <button
+            className="import-btn"
+            onClick={() => cameraRef.current.click()}
+            disabled={importing}
+            title={isJapanese ? 'カメラで撮影' : 'Take a photo'}
+          >
+            📷 {isJapanese ? 'カメラ' : 'Camera'}
+          </button>
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={handleFile}
+          />
+
           {importError && (
-            <span style={{ marginLeft: 12, fontSize: 13, color: 'var(--danger)' }}>{importError}</span>
+            <span style={{ fontSize: 13, color: 'var(--danger)' }}>{importError}</span>
           )}
         </div>
 
@@ -170,10 +225,10 @@ export default function HomeView({
               : 'Paste or type your notes here...'}
             value={noteText}
             onChange={e => setNoteText(e.target.value)}
-            maxLength={charLimit + 50}
+            maxLength={charLimit + 100}
           />
           <span className={`char-count ${overLimit ? 'over' : ''}`}>
-            {count} / {charLimit}
+            {count.toLocaleString()} / {charLimit.toLocaleString()}
           </span>
         </div>
 
@@ -183,11 +238,10 @@ export default function HomeView({
           disabled={!canGenerate}
           onClick={() => onGenerate(noteText.slice(0, charLimit))}
         >
-          ✨ {isJapanese ? '生成する' : 'Generate'}
+          ✨ {isJapanese ? '生成する' : 'Generate study material'}
         </button>
       </div>
 
-      {/* Settings sheet */}
       {showSettings && (
         <SettingsModal
           language={language}
@@ -196,6 +250,13 @@ export default function HomeView({
           setFurigana={setFurigana}
           isJapanese={isJapanese}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {showAuth && (
+        <AuthModal
+          isJapanese={isJapanese}
+          onClose={() => setShowAuth(false)}
         />
       )}
     </>

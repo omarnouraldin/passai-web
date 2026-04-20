@@ -18,21 +18,27 @@ export default async function handler(req, res) {
   if (language === 'japanese') {
     if (furigana) {
       languageInstruction = `IMPORTANT: Write ALL text values in Japanese (日本語).
-For any kanji that a university student might not know, wrap it in furigana markup like this: 【漢字|かんじ】
-Use the Japanese corner brackets 【 and 】 exactly as shown — do NOT use curly braces { }.
-Apply furigana to difficult or technical kanji only — not to every single kanji.`;
+This app is used by 留学生 (international students) so assume the reader's kanji knowledge is limited.
+Add furigana to ALL kanji EXCEPT the most basic everyday ones: 一二三四五六七八九十百千万日月火水木金土年人口手足目耳山川田大小中上下左右本今何円時国.
+Wrap every other kanji in furigana markup like this: 【漢字|かんじ】
+Use the Japanese corner brackets 【 and 】 exactly as shown — do NOT use curly braces { }.`;
     } else {
-      languageInstruction = 'IMPORTANT: All text values in the JSON MUST be written in Japanese (日本語).';
+      languageInstruction = 'IMPORTANT: All text values in the JSON MUST be written in Japanese (日本語). This app is used by 留学生 so write clearly.';
     }
   } else {
     languageInstruction = 'All text values in the JSON must be written in English.';
   }
 
-  const prompt = `You are a study assistant. A student has provided the following notes:
+  const keywordInstruction = `For the most critical keywords and terms that students MUST remember (3-5 per section), wrap them in 《》 like this: 《mitochondria》 or 《光合成》.
+These will be highlighted in red in the app. Apply this to the single most important word or short phrase only — not full sentences.`;
+
+  const prompt = `You are a study assistant helping university students, including many international students. A student has provided the following notes:
 
 ${noteText}
 
 ${languageInstruction}
+
+${keywordInstruction}
 
 Please generate the following in valid JSON format with EXACTLY these keys:
 {

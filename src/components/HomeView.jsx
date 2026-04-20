@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import SettingsModal from './SettingsModal.jsx';
-import Mascot from './Mascot.jsx';
 
 export default function HomeView({
   onGenerate, charLimit,
@@ -31,7 +30,7 @@ export default function HomeView({
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <Mascot pose="happy" size={64} style={{ borderRadius: 12 }} />
+            <img src="/mascot-icon.png" alt="PassAI" style={{ width: 60, height: 60, objectFit: 'contain', borderRadius: 14 }} />
             <div>
               <div className="logo">
                 <span className="logo-pass">{isJapanese ? 'パス' : 'Pass'}</span>

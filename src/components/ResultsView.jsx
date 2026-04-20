@@ -3,8 +3,6 @@ import SummaryTab    from './tabs/SummaryTab.jsx';
 import TopicsTab     from './tabs/TopicsTab.jsx';
 import FlashcardsTab from './tabs/FlashcardsTab.jsx';
 import QuizTab       from './tabs/QuizTab.jsx';
-import Mascot        from './Mascot.jsx';
-
 export default function ResultsView({ content, furigana, isJapanese, onBack }) {
   const tabs = isJapanese
     ? ['要約', 'トピック', 'フラッシュカード', 'クイズ']
@@ -12,23 +10,12 @@ export default function ResultsView({ content, furigana, isJapanese, onBack }) {
 
   const [activeTab, setActiveTab] = useState(0);
 
-  // Mascot pose changes per tab: Summary, Topics, Flashcards, Quiz
-  const poses = ['happy', 'thinking', 'front', 'panic'];
-
   return (
     <div className="page">
       {/* Back */}
       <button className="back-btn" onClick={onBack}>
         ← {isJapanese ? '戻る' : 'Back'}
       </button>
-
-      {/* Mascot header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <Mascot pose={poses[activeTab]} size={52} />
-        <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.4 }}>
-          {isJapanese ? '学習素材が完成しました！' : 'Your study material is ready!'}
-        </div>
-      </div>
 
       {/* Pill tabs */}
       <div className="pill-tabs" style={{ marginBottom: 24 }}>

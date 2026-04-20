@@ -1,5 +1,3 @@
-import Mascot from './Mascot.jsx';
-
 export default function HistoryView({ history, onOpen, onDelete, onClear, isJapanese }) {
   function formatDate(iso) {
     const d = new Date(iso);
@@ -28,9 +26,7 @@ export default function HistoryView({ history, onOpen, onDelete, onClear, isJapa
 
       {history.length === 0 ? (
         <div className="empty-state">
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-            <Mascot pose="sleepy" size={100} />
-          </div>
+          <div className="empty-icon">🕐</div>
           <div className="empty-title">{isJapanese ? '履歴なし' : 'No history yet'}</div>
           <div style={{ fontSize: 14, marginTop: 6 }}>
             {isJapanese ? 'ノートを生成すると、ここに表示されます' : 'Generate from your notes and they\'ll appear here'}

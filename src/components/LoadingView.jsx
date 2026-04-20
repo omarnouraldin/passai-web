@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import Mascot from './Mascot.jsx';
 
 const EN_MSGS = [
   'Analyzing your notes',
@@ -18,8 +17,8 @@ const JA_MSGS = [
 
 export default function LoadingView({ isJapanese }) {
   const messages = isJapanese ? JA_MSGS : EN_MSGS;
-  const [msgIdx, setMsgIdx]   = useState(0);
-  const [dots, setDots]       = useState(1);
+  const [msgIdx, setMsgIdx] = useState(0);
+  const [dots, setDots]     = useState(1);
 
   useEffect(() => {
     const t = setInterval(() => setMsgIdx(i => (i + 1) % messages.length), 1800);
@@ -33,14 +32,8 @@ export default function LoadingView({ isJapanese }) {
 
   return (
     <div className="loading-overlay">
-      <div className="pulse-rings">
-        <div className="ring ring-1" />
-        <div className="ring ring-2" />
-        <div className="ring ring-3" />
-        <div className="sparkle-center" style={{ background: 'none' }}>
-          <Mascot pose="panic" size={88} style={{ borderRadius: '50%', boxShadow: '0 0 0 4px rgba(107,96,255,0.35)' }} />
-        </div>
-      </div>
+      {/* Thinking cat */}
+      <img src="/mascot-loading.png" alt="Thinking..." style={{ width: 200, objectFit: 'contain' }} />
 
       <div className="loading-text">
         <div className="logo" style={{ textAlign: 'center', marginBottom: 14 }}>
@@ -49,7 +42,7 @@ export default function LoadingView({ isJapanese }) {
         </div>
         <div className="loading-msg" key={msgIdx}>
           {messages[msgIdx]}
-          <span className="loading-dots">{'.'  .repeat(dots)}</span>
+          <span className="loading-dots">{'.' .repeat(dots)}</span>
         </div>
       </div>
     </div>

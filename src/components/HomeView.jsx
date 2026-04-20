@@ -7,9 +7,49 @@ import SettingsModal from './SettingsModal.jsx';
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+// Compress image to JPEG via canvas so large phone photos don't exceed API limits
+async function compressImage(file) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 1600;
+      const ratio = Math.min(1, MAX / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(img.width  * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(resolve, 'image/jpeg', 0.85);
+    };
+    img.src = url;
+  });
+}
+
 async function extractText(file) {
   const ext = file.name.split('.').pop().toLowerCase();
 
+  // ── Images → Claude Vision OCR ──
+  if (IMAGE_EXTS.includes(ext)) {
+    const compressed = await compressImage(file);
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result.split(',')[1]);
+      reader.readAsDataURL(compressed);
+    });
+    const res = await fetch('/api/ocr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64, mediaType: 'image/jpeg' }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? 'OCR failed');
+    return data.text;
+  }
+
+  // ── PDF ──
   if (ext === 'pdf') {
     const buffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
@@ -22,13 +62,14 @@ async function extractText(file) {
     return text.trim();
   }
 
+  // ── Word docs ──
   if (ext === 'docx' || ext === 'doc') {
     const buffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer: buffer });
     return result.value.trim();
   }
 
-  // Plain text fallback: txt, md, etc.
+  // ── Plain text fallback ──
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = e => resolve(e.target.result);
@@ -111,7 +152,7 @@ export default function HomeView({
           <input
             ref={fileRef}
             type="file"
-            accept=".pdf,.doc,.docx,.txt,.md,.rtf"
+            accept=".pdf,.doc,.docx,.txt,.md,.rtf,.jpg,.jpeg,.png,.webp"
             style={{ display: 'none' }}
             onChange={handleFile}
           />

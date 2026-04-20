@@ -1,5 +1,41 @@
 import { useState, useRef } from 'react';
+import * as pdfjsLib from 'pdfjs-dist';
+import mammoth from 'mammoth';
 import SettingsModal from './SettingsModal.jsx';
+
+// Point pdf.js worker to CDN so no extra bundling is needed
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+
+async function extractText(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  if (ext === 'pdf') {
+    const buffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(item => item.str).join(' ') + '\n';
+    }
+    return text.trim();
+  }
+
+  if (ext === 'docx' || ext === 'doc') {
+    const buffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer: buffer });
+    return result.value.trim();
+  }
+
+  // Plain text fallback: txt, md, etc.
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
 
 export default function HomeView({
   onGenerate, charLimit,
@@ -9,19 +45,28 @@ export default function HomeView({
 }) {
   const [noteText, setNoteText]         = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [importing, setImporting]       = useState(false);
+  const [importError, setImportError]   = useState(null);
   const fileRef = useRef(null);
 
-  const count      = noteText.length;
-  const overLimit  = count > charLimit;
+  const count       = noteText.length;
+  const overLimit   = count > charLimit;
   const canGenerate = noteText.trim().length > 0 && !overLimit;
 
-  function handleFile(e) {
+  async function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => setNoteText(ev.target.result.slice(0, charLimit));
-    reader.readAsText(file);
     e.target.value = '';
+    setImporting(true);
+    setImportError(null);
+    try {
+      const text = await extractText(file);
+      setNoteText(text.slice(0, charLimit));
+    } catch (err) {
+      setImportError(isJapanese ? 'ファイルの読み込みに失敗しました' : 'Failed to read file');
+    } finally {
+      setImporting(false);
+    }
   }
 
   return (
@@ -52,10 +97,27 @@ export default function HomeView({
 
         {/* File import */}
         <div style={{ marginBottom: 12 }}>
-          <button className="btn btn-ghost" style={{ height: 40, fontSize: 13 }} onClick={() => fileRef.current.click()}>
-            📄 {isJapanese ? 'ファイルをインポート' : 'Import file'}
+          <button
+            className="btn btn-ghost"
+            style={{ height: 40, fontSize: 13 }}
+            onClick={() => fileRef.current.click()}
+            disabled={importing}
+          >
+            {importing
+              ? (isJapanese ? '読み込み中...' : 'Reading...')
+              : `📄 ${isJapanese ? 'ファイルをインポート' : 'Import file'}`}
           </button>
-          <input ref={fileRef} type="file" accept=".txt,.md" style={{ display: 'none' }} onChange={handleFile} />
+          {/* Accept PDF, Word, and plain text files */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".pdf,.doc,.docx,.txt,.md,.rtf"
+            style={{ display: 'none' }}
+            onChange={handleFile}
+          />
+          {importError && (
+            <span style={{ marginLeft: 12, fontSize: 13, color: 'var(--danger)' }}>{importError}</span>
+          )}
         </div>
 
         {/* Textarea */}

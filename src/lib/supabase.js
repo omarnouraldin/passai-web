@@ -2,13 +2,12 @@
 //
 // Setup steps:
 //  1. Go to https://supabase.com and create a free project
-//  2. In your project dashboard → Settings → API, copy:
-//     - Project URL  →  VITE_SUPABASE_URL
-//     - anon/public key  →  VITE_SUPABASE_ANON_KEY
-//  3. Add these to PassAI-Web/.env:
+//  2. Dashboard → Settings → API → copy:
+//       Project URL  →  VITE_SUPABASE_URL
+//       anon/public key  →  VITE_SUPABASE_ANON_KEY
+//  3. Add to PassAI-Web/.env and to Vercel environment variables:
 //       VITE_SUPABASE_URL=https://xxxx.supabase.co
 //       VITE_SUPABASE_ANON_KEY=eyJ...
-//  4. Also add them to your Vercel project environment variables
 //
 //  SQL to run in Supabase SQL editor:
 //
@@ -26,32 +25,16 @@
 // If env vars are not set, the app falls back gracefully to localStorage.
 // ──────────────────────────────────────────────────────────────────────────
 
-const SUPABASE_URL  = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const SUPABASE_ENABLED = !!(SUPABASE_URL && SUPABASE_KEY);
 
-// Lazily create the client only when env vars exist
-let _client = null;
+export const supabase = SUPABASE_ENABLED
+  ? createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
 
-export function getSupabaseClient() {
-  if (!SUPABASE_ENABLED) return null;
-  if (_client) return _client;
-
-  // Dynamic import so the bundle doesn't break when supabase-js isn't installed
-  throw new Error('Call createSupabaseClient() first');
-}
-
-// Called from main.jsx after @supabase/supabase-js is imported
-export let supabase = null;
-
-export async function initSupabase() {
-  if (!SUPABASE_ENABLED) return;
-  try {
-    const { createClient } = await import('@supabase/supabase-js');
-    supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-    _client = supabase;
-  } catch {
-    console.warn('PassAI: @supabase/supabase-js not installed — accounts disabled. Run: npm install @supabase/supabase-js');
-  }
-}
+// No-op shim so callers don't need to check — used in main.jsx
+export async function initSupabase() {}

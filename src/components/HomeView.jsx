@@ -6,13 +6,17 @@ import AuthModal from './AuthModal.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
-// Point pdf.js worker to CDN so no extra bundling is needed
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
-// Compress image to JPEG via canvas so large phone photos don't exceed API limits
+function formatSize(bytes) {
+  if (bytes < 1024)        return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 async function compressImage(file) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -31,28 +35,21 @@ async function compressImage(file) {
   });
 }
 
-async function extractText(file) {
+// Returns { text } for text-based files, { imageBase64, mediaType } for images
+async function processFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
+  const isImage = IMAGE_EXTS.includes(ext) || file.type.startsWith('image/');
 
-  // ── Images → Claude Vision OCR ──
-  if (IMAGE_EXTS.includes(ext) || file.type.startsWith('image/')) {
+  if (isImage) {
     const compressed = await compressImage(file);
     const base64 = await new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = e => resolve(e.target.result.split(',')[1]);
       reader.readAsDataURL(compressed);
     });
-    const res = await fetch('/api/ocr', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: base64, mediaType: 'image/jpeg' }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? 'OCR failed');
-    return data.text;
+    return { imageBase64: base64, mediaType: 'image/jpeg' };
   }
 
-  // ── PDF ──
   if (ext === 'pdf') {
     const buffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
@@ -62,23 +59,62 @@ async function extractText(file) {
       const content = await page.getTextContent();
       text += content.items.map(item => item.str).join(' ') + '\n';
     }
-    return text.trim();
+    return { text: text.trim() };
   }
 
-  // ── Word docs ──
   if (ext === 'docx' || ext === 'doc') {
     const buffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer: buffer });
-    return result.value.trim();
+    return { text: result.value.trim() };
   }
 
-  // ── Plain text fallback ──
-  return new Promise((resolve, reject) => {
+  // Plain text
+  const text = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = e => resolve(e.target.result);
     reader.onerror = reject;
     reader.readAsText(file);
   });
+  return { text };
+}
+
+// ── File card component ───────────────────────────────────────────────────────
+function FileCard({ file, status, onRemove, isJapanese }) {
+  const isImage = IMAGE_EXTS.includes(file.name.split('.').pop().toLowerCase()) || file.type.startsWith('image/');
+  const icon = isImage ? '📷' : '📄';
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '12px 14px',
+      background: 'var(--card)',
+      border: `1.5px solid ${status === 'ok' ? 'rgba(48,209,88,0.35)' : status === 'error' ? 'rgba(255,69,58,0.35)' : 'var(--border)'}`,
+      borderRadius: 'var(--radius-sm)',
+      marginBottom: 12,
+    }}>
+      <span style={{ fontSize: 22, flexShrink: 0 }}>{icon}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {file.name}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+          {formatSize(file.size)}
+          {status === 'loading' && <span style={{ marginLeft: 8 }}>{isJapanese ? '読み込み中...' : 'Processing...'}</span>}
+          {status === 'ok'      && <span style={{ marginLeft: 8, color: 'var(--success)', fontWeight: 700 }}>✓ {isJapanese ? '準備完了' : 'Ready'}</span>}
+          {status === 'error'   && <span style={{ marginLeft: 8, color: 'var(--danger)', fontWeight: 700 }}>✗ {isJapanese ? '読み込み失敗' : 'Failed'}</span>}
+        </div>
+      </div>
+      <button
+        onClick={onRemove}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 18, padding: 4, flexShrink: 0 }}
+        aria-label="Remove file"
+      >
+        ✕
+      </button>
+    </div>
+  );
 }
 
 export default function HomeView({
@@ -91,31 +127,38 @@ export default function HomeView({
   const { user }               = useAuth();
 
   const [noteText,     setNoteText]     = useState('');
+  const [importedFile, setImportedFile] = useState(null); // { file, status, data }
   const [showSettings, setShowSettings] = useState(false);
   const [showAuth,     setShowAuth]     = useState(false);
-  const [importing,    setImporting]    = useState(false);
-  const [importError,  setImportError]  = useState(null);
 
   const fileRef   = useRef(null);
   const cameraRef = useRef(null);
 
+  // If a file is loaded, use its data; otherwise use typed text
+  const canGenerate = importedFile?.status === 'ok' || noteText.trim().length > 0;
   const count       = noteText.length;
-  const overLimit   = count > charLimit;
-  const canGenerate = noteText.trim().length > 0 && !overLimit;
+  const overLimit   = !importedFile && count > charLimit;
 
   async function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
-    setImporting(true);
-    setImportError(null);
+
+    setImportedFile({ file, status: 'loading', data: null });
     try {
-      const text = await extractText(file);
-      setNoteText(text.slice(0, charLimit));
-    } catch (err) {
-      setImportError(isJapanese ? 'ファイルの読み込みに失敗しました' : 'Failed to read file');
-    } finally {
-      setImporting(false);
+      const data = await processFile(file);
+      setImportedFile({ file, status: 'ok', data });
+    } catch {
+      setImportedFile({ file, status: 'error', data: null });
+    }
+  }
+
+  function handleGenerate() {
+    if (importedFile?.status === 'ok') {
+      // Pass image or text data from file directly — Claude studies it
+      onGenerate(null, importedFile.data);
+    } else {
+      onGenerate(noteText.slice(0, charLimit), null);
     }
   }
 
@@ -125,11 +168,7 @@ export default function HomeView({
         {/* Header */}
         <div className="header-row">
           <div className="header-left">
-            <img
-              src="/mascot-icon.png"
-              alt="PassAI"
-              className="mascot-icon"
-            />
+            <img src="/mascot-icon.png" alt="PassAI" className="mascot-icon" />
             <div>
               <div className="logo">
                 <span className="logo-pass">{isJapanese ? 'パス' : 'Pass'}</span>
@@ -140,50 +179,27 @@ export default function HomeView({
               </div>
             </div>
           </div>
-
           <div className="header-actions">
-            {/* Theme toggle */}
-            <button
-              className="icon-btn"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-            >
+            <button className="icon-btn" onClick={toggleTheme} aria-label="Toggle theme">
               {theme === 'dark' ? '☀️' : '🌙'}
             </button>
-
-            {/* Account button */}
-            <button
-              className="icon-btn"
-              onClick={() => setShowAuth(true)}
-              aria-label="Account"
-              title={user ? user.email : 'Sign in'}
-            >
+            <button className="icon-btn" onClick={() => setShowAuth(true)} aria-label="Account">
               {user ? '👤' : '🔑'}
             </button>
-
-            {/* Settings */}
-            <button
-              className="icon-btn"
-              onClick={() => setShowSettings(true)}
-              aria-label="Settings"
-            >
+            <button className="icon-btn" onClick={() => setShowSettings(true)} aria-label="Settings">
               ⚙️
             </button>
           </div>
         </div>
 
-        {/* File import row */}
+        {/* File import buttons */}
         <div className="import-row">
-          {/* File picker */}
           <button
             className="import-btn"
             onClick={() => fileRef.current.click()}
-            disabled={importing}
+            disabled={importedFile?.status === 'loading'}
           >
-            {importing
-              ? (isJapanese ? '読み込み中...' : 'Reading...')
-              : `📄 ${isJapanese ? 'ファイル' : 'Import file'}`}
+            📄 {isJapanese ? 'ファイル' : 'Import file'}
           </button>
           <input
             ref={fileRef}
@@ -193,12 +209,10 @@ export default function HomeView({
             onChange={handleFile}
           />
 
-          {/* Camera (photo capture — shows naturally on mobile) */}
           <button
             className="import-btn"
             onClick={() => cameraRef.current.click()}
-            disabled={importing}
-            title={isJapanese ? 'カメラで撮影' : 'Take a photo'}
+            disabled={importedFile?.status === 'loading'}
           >
             📷 {isJapanese ? 'カメラ' : 'Camera'}
           </button>
@@ -210,33 +224,43 @@ export default function HomeView({
             style={{ display: 'none' }}
             onChange={handleFile}
           />
-
-          {importError && (
-            <span style={{ fontSize: 13, color: 'var(--danger)' }}>{importError}</span>
-          )}
         </div>
 
-        {/* Textarea */}
-        <div className="note-area-wrap" style={{ marginBottom: 16 }}>
-          <textarea
-            className="note-area"
-            placeholder={isJapanese
-              ? 'ここにノートを入力または貼り付けてください...'
-              : 'Paste or type your notes here...'}
-            value={noteText}
-            onChange={e => setNoteText(e.target.value)}
-            maxLength={charLimit + 100}
+        {/* File card — shown instead of raw text when file is loaded */}
+        {importedFile && (
+          <FileCard
+            file={importedFile.file}
+            status={importedFile.status}
+            isJapanese={isJapanese}
+            onRemove={() => setImportedFile(null)}
           />
-          <span className={`char-count ${overLimit ? 'over' : ''}`}>
-            {count.toLocaleString()} / {charLimit.toLocaleString()}
-          </span>
-        </div>
+        )}
 
-        {/* Generate button */}
+        {/* Textarea — shown only when no file is loaded */}
+        {!importedFile && (
+          <div className="note-area-wrap" style={{ marginBottom: 16 }}>
+            <textarea
+              className="note-area"
+              placeholder={isJapanese
+                ? 'ここにノートを入力または貼り付けてください...'
+                : 'Paste or type your notes here...'}
+              value={noteText}
+              onChange={e => setNoteText(e.target.value)}
+              maxLength={charLimit + 100}
+            />
+            <span className={`char-count ${overLimit ? 'over' : ''}`}>
+              {count.toLocaleString()} / {charLimit.toLocaleString()}
+            </span>
+          </div>
+        )}
+
+        {/* Spacer when file card is shown */}
+        {importedFile && <div style={{ height: 16 }} />}
+
         <button
           className="btn btn-primary"
-          disabled={!canGenerate}
-          onClick={() => onGenerate(noteText.slice(0, charLimit))}
+          disabled={!canGenerate || overLimit || importedFile?.status === 'loading'}
+          onClick={handleGenerate}
         >
           ✨ {isJapanese ? '生成する' : 'Generate study material'}
         </button>
@@ -244,20 +268,14 @@ export default function HomeView({
 
       {showSettings && (
         <SettingsModal
-          language={language}
-          setLanguage={setLanguage}
-          furigana={furigana}
-          setFurigana={setFurigana}
+          language={language} setLanguage={setLanguage}
+          furigana={furigana} setFurigana={setFurigana}
           isJapanese={isJapanese}
           onClose={() => setShowSettings(false)}
         />
       )}
-
       {showAuth && (
-        <AuthModal
-          isJapanese={isJapanese}
-          onClose={() => setShowAuth(false)}
-        />
+        <AuthModal isJapanese={isJapanese} onClose={() => setShowAuth(false)} />
       )}
     </>
   );

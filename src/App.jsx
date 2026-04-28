@@ -70,22 +70,32 @@ function AppInner() {
   }, [toast]);
 
   // ── Generate ───────────────────────────────────────────────────────────
-  async function generate(noteText) {
+  // fileData = { text } | { imageBase64, mediaType } | null
+  async function generate(noteText, fileData) {
     setIsLoading(true);
     setError(null);
     try {
+      const body = { language, furigana };
+      if (fileData?.imageBase64) {
+        body.imageBase64 = fileData.imageBase64;
+        body.mediaType   = fileData.mediaType;
+      } else {
+        body.noteText = fileData?.text ?? noteText;
+      }
+
       const res = await fetch('/api/generate', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ noteText, language, furigana }),
+        body:    JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Unknown error');
 
+      const snippetSource = fileData?.text ?? noteText ?? '';
       const item = {
         id:      Date.now(),
         date:    new Date().toISOString(),
-        snippet: noteText.slice(0, 80),
+        snippet: fileData?.imageBase64 ? '📷 Image' : snippetSource.slice(0, 80),
         content: data,
       };
 

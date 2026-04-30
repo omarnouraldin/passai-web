@@ -3,7 +3,6 @@ import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 import SettingsModal from './SettingsModal.jsx';
 import AuthModal from './AuthModal.jsx';
-import { useTheme } from '../contexts/ThemeContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -117,14 +116,45 @@ function FileCard({ file, status, onRemove, isJapanese }) {
   );
 }
 
+// ── Login gate ────────────────────────────────────────────────────────────────
+function LoginGate({ isJapanese, onOpenAuth }) {
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flex: 1,
+      padding: '40px 24px',
+      textAlign: 'center',
+    }}>
+      <div style={{ fontSize: 72, marginBottom: 20 }}>🎓</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
+        {isJapanese ? 'ようこそ PassAI へ' : 'Welcome to PassAI'}
+      </div>
+      <div style={{ fontSize: 15, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 32, maxWidth: 280 }}>
+        {isJapanese
+          ? 'アプリを使うにはサインインが必要です。アカウントを作成するか、既存のアカウントでログインしてください。'
+          : 'Sign in to start turning your notes into study material. It only takes a moment.'}
+      </div>
+      <button
+        className="btn btn-primary"
+        style={{ width: '100%', maxWidth: 280 }}
+        onClick={onOpenAuth}
+      >
+        {isJapanese ? 'サインイン / 新規登録' : 'Sign in / Sign up'}
+      </button>
+    </div>
+  );
+}
+
 export default function HomeView({
   onGenerate, charLimit,
   language, setLanguage,
   furigana, setFurigana,
   isJapanese,
 }) {
-  const { theme, toggleTheme } = useTheme();
-  const { user }               = useAuth();
+  const { user, enabled } = useAuth();
 
   const [noteText,     setNoteText]     = useState('');
   const [importedFile, setImportedFile] = useState(null); // { file, status, data }
@@ -133,6 +163,9 @@ export default function HomeView({
 
   const fileRef   = useRef(null);
   const cameraRef = useRef(null);
+
+  // Require login when Supabase is configured
+  const requiresAuth = enabled && !user;
 
   // If a file is loaded, use its data; otherwise use typed text
   const canGenerate = importedFile?.status === 'ok' || noteText.trim().length > 0;
@@ -155,7 +188,6 @@ export default function HomeView({
 
   function handleGenerate() {
     if (importedFile?.status === 'ok') {
-      // Pass image or text data from file directly — Claude studies it
       onGenerate(null, importedFile.data);
     } else {
       onGenerate(noteText.slice(0, charLimit), null);
@@ -180,90 +212,92 @@ export default function HomeView({
             </div>
           </div>
           <div className="header-actions">
-            <button className="icon-btn" onClick={toggleTheme} aria-label="Toggle theme">
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
-            <button className="icon-btn" onClick={() => setShowAuth(true)} aria-label="Account">
-              {user ? '👤' : '🔑'}
-            </button>
+            {/* Only settings button in header — auth + theme are inside settings */}
             <button className="icon-btn" onClick={() => setShowSettings(true)} aria-label="Settings">
               ⚙️
             </button>
           </div>
         </div>
 
-        {/* File import buttons */}
-        <div className="import-row">
-          <button
-            className="import-btn"
-            onClick={() => fileRef.current.click()}
-            disabled={importedFile?.status === 'loading'}
-          >
-            📄 {isJapanese ? 'ファイル' : 'Import file'}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".pdf,.doc,.docx,.txt,.md,.rtf,.jpg,.jpeg,.png,.webp"
-            style={{ display: 'none' }}
-            onChange={handleFile}
-          />
+        {/* Login gate — shown when Supabase is enabled but user is not logged in */}
+        {requiresAuth ? (
+          <LoginGate isJapanese={isJapanese} onOpenAuth={() => setShowAuth(true)} />
+        ) : (
+          <>
+            {/* File import buttons */}
+            <div className="import-row">
+              <button
+                className="import-btn"
+                onClick={() => fileRef.current.click()}
+                disabled={importedFile?.status === 'loading'}
+              >
+                📄 {isJapanese ? 'ファイル' : 'Import file'}
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.txt,.md,.rtf,.jpg,.jpeg,.png,.webp"
+                style={{ display: 'none' }}
+                onChange={handleFile}
+              />
 
-          <button
-            className="import-btn"
-            onClick={() => cameraRef.current.click()}
-            disabled={importedFile?.status === 'loading'}
-          >
-            📷 {isJapanese ? 'カメラ' : 'Camera'}
-          </button>
-          <input
-            ref={cameraRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            style={{ display: 'none' }}
-            onChange={handleFile}
-          />
-        </div>
+              <button
+                className="import-btn"
+                onClick={() => cameraRef.current.click()}
+                disabled={importedFile?.status === 'loading'}
+              >
+                📷 {isJapanese ? 'カメラ' : 'Camera'}
+              </button>
+              <input
+                ref={cameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={handleFile}
+              />
+            </div>
 
-        {/* File card — shown instead of raw text when file is loaded */}
-        {importedFile && (
-          <FileCard
-            file={importedFile.file}
-            status={importedFile.status}
-            isJapanese={isJapanese}
-            onRemove={() => setImportedFile(null)}
-          />
+            {/* File card — shown instead of raw text when file is loaded */}
+            {importedFile && (
+              <FileCard
+                file={importedFile.file}
+                status={importedFile.status}
+                isJapanese={isJapanese}
+                onRemove={() => setImportedFile(null)}
+              />
+            )}
+
+            {/* Textarea — shown only when no file is loaded */}
+            {!importedFile && (
+              <div className="note-area-wrap" style={{ marginBottom: 16 }}>
+                <textarea
+                  className="note-area"
+                  placeholder={isJapanese
+                    ? 'ここにノートを入力または貼り付けてください...'
+                    : 'Paste or type your notes here...'}
+                  value={noteText}
+                  onChange={e => setNoteText(e.target.value)}
+                  maxLength={charLimit + 100}
+                />
+                <span className={`char-count ${overLimit ? 'over' : ''}`}>
+                  {count.toLocaleString()} / {charLimit.toLocaleString()}
+                </span>
+              </div>
+            )}
+
+            {/* Spacer when file card is shown */}
+            {importedFile && <div style={{ height: 16 }} />}
+
+            <button
+              className="btn btn-primary"
+              disabled={!canGenerate || overLimit || importedFile?.status === 'loading'}
+              onClick={handleGenerate}
+            >
+              ✨ {isJapanese ? '生成する' : 'Generate study material'}
+            </button>
+          </>
         )}
-
-        {/* Textarea — shown only when no file is loaded */}
-        {!importedFile && (
-          <div className="note-area-wrap" style={{ marginBottom: 16 }}>
-            <textarea
-              className="note-area"
-              placeholder={isJapanese
-                ? 'ここにノートを入力または貼り付けてください...'
-                : 'Paste or type your notes here...'}
-              value={noteText}
-              onChange={e => setNoteText(e.target.value)}
-              maxLength={charLimit + 100}
-            />
-            <span className={`char-count ${overLimit ? 'over' : ''}`}>
-              {count.toLocaleString()} / {charLimit.toLocaleString()}
-            </span>
-          </div>
-        )}
-
-        {/* Spacer when file card is shown */}
-        {importedFile && <div style={{ height: 16 }} />}
-
-        <button
-          className="btn btn-primary"
-          disabled={!canGenerate || overLimit || importedFile?.status === 'loading'}
-          onClick={handleGenerate}
-        >
-          ✨ {isJapanese ? '生成する' : 'Generate study material'}
-        </button>
       </div>
 
       {showSettings && (
@@ -272,6 +306,7 @@ export default function HomeView({
           furigana={furigana} setFurigana={setFurigana}
           isJapanese={isJapanese}
           onClose={() => setShowSettings(false)}
+          onOpenAuth={() => { setShowSettings(false); setShowAuth(true); }}
         />
       )}
       {showAuth && (

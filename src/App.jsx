@@ -19,15 +19,17 @@ function loadLocalHistory() {
 function AppInner() {
   const { user } = useAuth();
 
-  const [view,        setView]      = useState('home');   // 'home' | 'results' | 'history'
+  const [view,        setView]      = useState('home');
   const [isLoading,   setIsLoading] = useState(false);
+  const [progress,    setProgress]  = useState(0);
   const [generated,   setGenerated] = useState(null);
   const [contentId,   setContentId] = useState(null);
   const [history,     setHistory]   = useState(loadLocalHistory);
   const [language,    setLanguage]  = useState('english');
   const [furigana,    setFurigana]  = useState(false);
   const [error,       setError]     = useState(null);
-  const [toast,       setToast]     = useState(null);    // { msg, type }
+  const [toast,       setToast]     = useState(null);
+  const [abortCtrl,   setAbortCtrl] = useState(null);
 
   const isJapanese = language === 'japanese';
 
@@ -71,10 +73,21 @@ function AppInner() {
   }, [toast]);
 
   // ── Generate ───────────────────────────────────────────────────────────
+  function cancelGeneration() {
+    abortCtrl?.abort();
+    setIsLoading(false);
+    setProgress(0);
+    setAbortCtrl(null);
+  }
+
   // fileData = { text } | { imageBase64, mediaType } | null
   async function generate(noteText, fileData) {
+    const controller = new AbortController();
+    setAbortCtrl(controller);
     setIsLoading(true);
+    setProgress(0);
     setError(null);
+
     try {
       const body = { language, furigana };
       if (fileData?.imageBase64) {
@@ -88,9 +101,42 @@ function AppInner() {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(body),
+        signal:  controller.signal,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Unknown error');
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error ?? 'Unknown error');
+      }
+
+      // ── Read SSE stream ──────────────────────────────────────────────────
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let sseBuffer = '';
+      let data      = null;
+
+      outer: while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        sseBuffer += decoder.decode(value, { stream: true });
+        const lines = sseBuffer.split('\n');
+        sseBuffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.type === 'progress') setProgress(event.value);
+            if (event.type === 'result')   { data = event.data; break outer; }
+            if (event.type === 'error')    throw new Error(event.message);
+          } catch (e) {
+            if (e.message !== 'Unexpected end of JSON input') throw e;
+          }
+        }
+      }
+
+      if (!data) throw new Error('No result received');
 
       const snippetSource = fileData?.text ?? noteText ?? '';
       const item = {
@@ -114,9 +160,11 @@ function AppInner() {
         }).then(() => {});
       }
     } catch (err) {
-      setError(err.message);
+      if (err.name !== 'AbortError') setError(err.message);
     } finally {
       setIsLoading(false);
+      setProgress(0);
+      setAbortCtrl(null);
     }
   }
 
@@ -146,7 +194,7 @@ function AppInner() {
 
   return (
     <div className="app">
-      {isLoading && <LoadingView isJapanese={isJapanese} />}
+      {isLoading && <LoadingView isJapanese={isJapanese} progress={progress} onCancel={cancelGeneration} />}
 
       {view === 'home' && (
         <HomeView

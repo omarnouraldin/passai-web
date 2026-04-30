@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   if (language === 'japanese') {
     if (furigana) {
       languageInstruction = `IMPORTANT: Write ALL text values in Japanese (日本語).
-This app is used by 留学生 (international students) so assume limited kanji knowledge.
+This app is used by 留学生 so assume limited kanji knowledge.
 Add furigana to ALL kanji EXCEPT the most basic: 一二三四五六七八九十百千万日月火水木金土年人口手足目耳山川田大小中上下左右本今何円時国.
 Wrap every other kanji like this: 【漢字|かんじ】 — use 【 and 】 exactly, NOT curly braces.`;
     } else {
@@ -31,10 +31,10 @@ Wrap every other kanji like this: 【漢字|かんじ】 — use 【 and 】 exa
     languageInstruction = 'All text values in the JSON must be written in English.';
   }
 
-  const keywordInstruction = `Use these color markup tags to make key content stand out (students remember colored text better):
+  const keywordInstruction = `Use these color markup tags to make key content stand out:
 - 《term》 → RED — the single most critical keyword per section (must-memorize terms)
-- 〔concept〕 → ORANGE — important concepts and definitions (things to understand deeply)
-- ｛example｝ → BLUE — examples, numbers, or analogies that illustrate a point
+- 〔concept〕 → ORANGE — important concepts and definitions
+- ｛example｝ → BLUE — examples, numbers, or analogies
 Apply markup to individual words or short phrases only — never full sentences. Use 2-4 highlights per section.`;
 
   const illustrationInstruction = `ILLUSTRATION: In "illustrationQuery", provide ONE specific search term in ${language === 'japanese' ? 'Japanese (日本語)' : 'English'} to find a helpful Wikipedia image for this topic. Be specific (e.g. "${language === 'japanese' ? '二次関数 グラフ' : 'quadratic function parabola'}"). Return null if no visual would help.`;
@@ -49,52 +49,30 @@ ${languageInstruction}
 
 ${keywordInstruction}
 
-YOUR MISSION: Don't just summarize — TEACH. Imagine a student sent you this right before an exam and asked you to explain everything so they can actually understand and remember it.
+YOUR MISSION: Don't just summarize — TEACH. Imagine a student sent you this right before an exam and asked you to explain everything so they can understand and remember it.
 
 MATH & SCIENCE RULES:
 - In simpleExplanation, show a complete worked example with clearly numbered steps (Step 1, Step 2...)
-- Explain WHY each step is done, not just what to do
-- Use plain language for formulas — write "x squared" or x² not LaTeX
+- Explain WHY each step is done
+- Use plain language for formulas — write "x squared" or x²
 - Use everyday analogies ("Think of it like...")
-- If there are multiple problem types, show a worked example for each
-- Make steps so clear that someone new to the topic could follow them
 
-CORRECTIONS:
-- Carefully check for factual errors, wrong formulas, logical mistakes, or misconceptions
-- If you find errors, write: "Incorrect: [what they wrote]. Correct: [what it should be] because [reason]."
-- If everything is correct, return an empty array []
+CORRECTIONS: Check for factual errors, wrong formulas, logical mistakes. List each as "Incorrect: X. Correct: Y because Z." Return [] if correct.
 
 ${illustrationInstruction}
 
-Please respond in valid JSON with EXACTLY these keys:
+Respond in valid JSON with EXACTLY these keys:
 {
-  "summary": "A clear 2-3 sentence overview of what this material covers",
-  "simpleExplanation": "A thorough plain-language explanation. For math/science: include a fully worked example with numbered steps. Use analogies. Explain the WHY. Write as if explaining to a smart friend who has never seen this topic.",
+  "summary": "A clear 2-3 sentence overview",
+  "simpleExplanation": "Thorough plain-language explanation with numbered steps for math/science, analogies, and the WHY.",
   "corrections": [],
-  "illustrationQuery": "specific english search term or null",
+  "illustrationQuery": "search term or null",
   "keyTopics": ["topic1", "topic2", "topic3"],
-  "flashcards": [
-    { "question": "...", "answer": "..." }
-  ],
-  "quiz": [
-    {
-      "question": "...",
-      "options": ["option 1", "option 2", "option 3", "option 4"],
-      "correctIndex": 0,
-      "explanation": "One short sentence explaining why."
-    }
-  ]
+  "flashcards": [{ "question": "...", "answer": "..." }],
+  "quiz": [{ "question": "...", "options": ["a","b","c","d"], "correctIndex": 0, "explanation": "One sentence." }]
 }
 
-Rules:
-- Generate at least 5 flashcards
-- Generate 4 quiz questions most likely to appear on a university exam
-- Each quiz question must have exactly 4 options
-- correctIndex is 0-based
-- Vary the correct answer position
-- Make wrong options plausible
-- Keep quiz explanations to ONE sentence
-- Return ONLY the JSON. No markdown, no code blocks.`;
+Rules: 5+ flashcards, 4 quiz questions, exactly 4 options each, vary correct answer position, return ONLY the JSON.`;
 
   const messageContent = hasImage
     ? [
@@ -103,8 +81,18 @@ Rules:
       ]
     : prompt;
 
+  // ── SSE headers — keep connection open for streaming ─────────────────────
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  function send(obj) {
+    res.write(`data: ${JSON.stringify(obj)}\n\n`);
+  }
+
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -114,20 +102,58 @@ Rules:
       body: JSON.stringify({
         model: 'claude-opus-4-6',
         max_tokens: 6000,
+        stream: true,
         messages: [{ role: 'user', content: messageContent }],
       }),
     });
 
-    if (!response.ok) {
-      const err = await response.text();
+    if (!anthropicRes.ok) {
+      const err = await anthropicRes.text();
       console.error('Anthropic error:', err);
-      return res.status(502).json({ error: 'AI service error. Try again.' });
+      send({ type: 'error', message: 'AI service error. Try again.' });
+      res.end();
+      return;
     }
 
-    const data = await response.json();
-    const rawText = data.content?.[0]?.text ?? '';
+    // ── Read Anthropic SSE stream ─────────────────────────────────────────
+    const reader  = anthropicRes.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText  = '';
+    let charCount = 0;
+    const EXPECTED_CHARS = 5000; // typical response size for progress calc
+    let sseBuffer = '';
 
-    const cleanText = rawText
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      sseBuffer += decoder.decode(value, { stream: true });
+      const lines = sseBuffer.split('\n');
+      sseBuffer = lines.pop(); // keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') continue;
+
+        try {
+          const event = JSON.parse(raw);
+          if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+            const chunk = event.delta.text;
+            fullText  += chunk;
+            charCount += chunk.length;
+            // Map chars received → 5%–90% progress range
+            const pct = Math.min(90, 5 + Math.round((charCount / EXPECTED_CHARS) * 85));
+            send({ type: 'progress', value: pct });
+          }
+        } catch { /* skip malformed SSE lines */ }
+      }
+    }
+
+    // ── Parse complete JSON ───────────────────────────────────────────────
+    send({ type: 'progress', value: 96 });
+
+    const cleanText = fullText
       .trim()
       .replace(/^```json\s*/im, '')
       .replace(/^```\s*/im, '')
@@ -135,9 +161,13 @@ Rules:
       .trim();
 
     const parsed = JSON.parse(cleanText);
-    res.json(parsed);
+    send({ type: 'progress', value: 100 });
+    send({ type: 'result', data: parsed });
+
   } catch (err) {
     console.error('Generate error:', err);
-    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+    send({ type: 'error', message: 'Something went wrong. Please try again.' });
   }
+
+  res.end();
 }

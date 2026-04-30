@@ -4,6 +4,7 @@ import SummaryTab    from './tabs/SummaryTab.jsx';
 import TopicsTab     from './tabs/TopicsTab.jsx';
 import FlashcardsTab from './tabs/FlashcardsTab.jsx';
 import QuizTab       from './tabs/QuizTab.jsx';
+import ExamTab       from './tabs/ExamTab.jsx';
 
 function stripMarkup(text = '') {
   return text
@@ -35,10 +36,10 @@ function buildShareText(content, isJapanese) {
   return lines.join('\n');
 }
 
-export default function ResultsView({ content, contentId, furigana, isJapanese, onBack, onToast }) {
+export default function ResultsView({ content, contentId, originalInput, furigana, isJapanese, onBack, onToast }) {
   const tabDefs = isJapanese
-    ? ['簡単解説', '要約', 'トピック', 'フラッシュカード', 'クイズ']
-    : ['Simple', 'Summary', 'Topics', 'Flashcards', 'Quiz'];
+    ? ['簡単解説', '要約', 'トピック', 'フラッシュカード', 'クイズ', '試験']
+    : ['Simple', 'Summary', 'Topics', 'Flashcards', 'Quiz', 'Exam'];
 
   const [activeTab, setActiveTab] = useState(0);
   const [copied,    setCopied]    = useState(false);
@@ -67,7 +68,7 @@ export default function ResultsView({ content, contentId, furigana, isJapanese, 
         ← {isJapanese ? '戻る' : 'Back'}
       </button>
 
-      {/* Corrections badge — visible across all tabs */}
+      {/* Corrections badge */}
       {hasCorrections && (
         <div
           style={{
@@ -107,6 +108,9 @@ export default function ResultsView({ content, contentId, furigana, isJapanese, 
             {i === 0 && hasCorrections && (
               <span style={{ marginLeft: 5, color: 'var(--danger)' }}>•</span>
             )}
+            {i === 5 && (
+              <span style={{ marginLeft: 4, fontSize: 10, color: 'var(--color-amber)', fontWeight: 700 }}>PRO</span>
+            )}
           </button>
         ))}
       </div>
@@ -124,6 +128,14 @@ export default function ResultsView({ content, contentId, furigana, isJapanese, 
       {activeTab === 2 && <TopicsTab     topics={content.keyTopics}   furigana={furigana} isJapanese={isJapanese} />}
       {activeTab === 3 && <FlashcardsTab cards={content.flashcards}   furigana={furigana} isJapanese={isJapanese} contentId={contentId} />}
       {activeTab === 4 && <QuizTab       questions={content.quiz}      furigana={furigana} isJapanese={isJapanese} contentId={contentId} />}
+      {activeTab === 5 && (
+        <ExamTab
+          originalInput={originalInput}
+          furigana={furigana}
+          isJapanese={isJapanese}
+          contentId={contentId}
+        />
+      )}
     </div>
   );
 }

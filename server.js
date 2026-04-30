@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
@@ -9,6 +10,25 @@ app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 
 const PORT = process.env.PORT || 3001;
+
+async function getIsPro(authHeader) {
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return false;
+  const supabaseUrl  = process.env.VITE_SUPABASE_URL;
+  const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnon) return false;
+  try {
+    const supabase = createClient(supabaseUrl, supabaseAnon);
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return false;
+    const userClient = createClient(supabaseUrl, supabaseAnon, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: profile } = await userClient
+      .from('profiles').select('is_pro').eq('id', user.id).single();
+    return profile?.is_pro ?? false;
+  } catch { return false; }
+}
 
 // ── /api/generate — streaming SSE response ────────────────────────────────────
 app.post('/api/generate', async (req, res) => {
@@ -23,6 +43,10 @@ app.post('/api/generate', async (req, res) => {
   const hasImage = !!imageBase64;
   const hasText  = noteText && noteText.trim().length > 0;
   if (!hasImage && !hasText) return res.status(400).json({ error: 'No content provided.' });
+
+  // Model selection based on pro status
+  const isPro = await getIsPro(req.headers.authorization);
+  const model = isPro ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
 
   let languageInstruction;
   if (language === 'japanese') {
@@ -104,8 +128,8 @@ Rules: 5+ flashcards, 4 quiz questions, exactly 4 options each, vary correct ans
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-6',
-        max_tokens: 6000,
+        model,
+        max_tokens: 4000,
         stream: true,
         messages: [{ role: 'user', content: messageContent }],
       }),

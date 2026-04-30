@@ -1,3 +1,34 @@
+import { createClient } from '@supabase/supabase-js';
+
+// ── Resolve user's pro status from Supabase JWT ───────────────────────────────
+async function getIsPro(authHeader) {
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return false;
+
+  const supabaseUrl  = process.env.VITE_SUPABASE_URL;
+  const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnon) return false;
+
+  try {
+    const supabase = createClient(supabaseUrl, supabaseAnon);
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return false;
+
+    const userClient = createClient(supabaseUrl, supabaseAnon, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: profile } = await userClient
+      .from('profiles')
+      .select('is_pro')
+      .eq('id', user.id)
+      .single();
+
+    return profile?.is_pro ?? false;
+  } catch {
+    return false;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -15,6 +46,10 @@ export default async function handler(req, res) {
   const hasImage = !!imageBase64;
   const hasText  = noteText && noteText.trim().length > 0;
   if (!hasImage && !hasText) return res.status(400).json({ error: 'No content provided.' });
+
+  // ── Model selection: pro → Sonnet, free → Haiku ──────────────────────────
+  const isPro = await getIsPro(req.headers.authorization);
+  const model = isPro ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
 
   // ── Language instructions ─────────────────────────────────────────────────
   let languageInstruction;
@@ -81,7 +116,7 @@ Rules: 5+ flashcards, 4 quiz questions, exactly 4 options each, vary correct ans
       ]
     : prompt;
 
-  // ── SSE headers — keep connection open for streaming ─────────────────────
+  // ── SSE headers ───────────────────────────────────────────────────────────
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('X-Accel-Buffering', 'no');
@@ -100,8 +135,8 @@ Rules: 5+ flashcards, 4 quiz questions, exactly 4 options each, vary correct ans
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-6',
-        max_tokens: 6000,
+        model,
+        max_tokens: 4000,
         stream: true,
         messages: [{ role: 'user', content: messageContent }],
       }),
@@ -115,12 +150,11 @@ Rules: 5+ flashcards, 4 quiz questions, exactly 4 options each, vary correct ans
       return;
     }
 
-    // ── Read Anthropic SSE stream ─────────────────────────────────────────
     const reader  = anthropicRes.body.getReader();
     const decoder = new TextDecoder();
     let fullText  = '';
     let charCount = 0;
-    const EXPECTED_CHARS = 5000; // typical response size for progress calc
+    const EXPECTED_CHARS = 4000;
     let sseBuffer = '';
 
     while (true) {
@@ -129,37 +163,28 @@ Rules: 5+ flashcards, 4 quiz questions, exactly 4 options each, vary correct ans
 
       sseBuffer += decoder.decode(value, { stream: true });
       const lines = sseBuffer.split('\n');
-      sseBuffer = lines.pop(); // keep incomplete line in buffer
+      sseBuffer = lines.pop();
 
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         const raw = line.slice(6).trim();
         if (raw === '[DONE]') continue;
-
         try {
           const event = JSON.parse(raw);
           if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
             const chunk = event.delta.text;
             fullText  += chunk;
             charCount += chunk.length;
-            // Map chars received → 5%–90% progress range
             const pct = Math.min(90, 5 + Math.round((charCount / EXPECTED_CHARS) * 85));
             send({ type: 'progress', value: pct });
           }
-        } catch { /* skip malformed SSE lines */ }
+        } catch { /* skip malformed lines */ }
       }
     }
 
-    // ── Parse complete JSON ───────────────────────────────────────────────
     send({ type: 'progress', value: 96 });
-
-    const cleanText = fullText
-      .trim()
-      .replace(/^```json\s*/im, '')
-      .replace(/^```\s*/im, '')
-      .replace(/```\s*$/im, '')
-      .trim();
-
+    const cleanText = fullText.trim()
+      .replace(/^```json\s*/im, '').replace(/^```\s*/im, '').replace(/```\s*$/im, '').trim();
     const parsed = JSON.parse(cleanText);
     send({ type: 'progress', value: 100 });
     send({ type: 'result', data: parsed });

@@ -17,19 +17,20 @@ function loadLocalHistory() {
 
 // ── Inner app (has access to auth context) ───────────────────────────────────
 function AppInner() {
-  const { user } = useAuth();
+  const { user, getAccessToken } = useAuth();
 
-  const [view,        setView]      = useState('home');
-  const [isLoading,   setIsLoading] = useState(false);
-  const [progress,    setProgress]  = useState(0);
-  const [generated,   setGenerated] = useState(null);
-  const [contentId,   setContentId] = useState(null);
-  const [history,     setHistory]   = useState(loadLocalHistory);
-  const [language,    setLanguage]  = useState('english');
-  const [furigana,    setFurigana]  = useState(false);
-  const [error,       setError]     = useState(null);
-  const [toast,       setToast]     = useState(null);
-  const [abortCtrl,   setAbortCtrl] = useState(null);
+  const [view,          setView]        = useState('home');
+  const [isLoading,     setIsLoading]   = useState(false);
+  const [progress,      setProgress]    = useState(0);
+  const [generated,     setGenerated]   = useState(null);
+  const [contentId,     setContentId]   = useState(null);
+  const [originalInput, setOriginalInput] = useState(null);
+  const [history,       setHistory]     = useState(loadLocalHistory);
+  const [language,      setLanguage]    = useState('english');
+  const [furigana,      setFurigana]    = useState(false);
+  const [error,         setError]       = useState(null);
+  const [toast,         setToast]       = useState(null);
+  const [abortCtrl,     setAbortCtrl]   = useState(null);
 
   const isJapanese = language === 'japanese';
 
@@ -87,6 +88,7 @@ function AppInner() {
     setIsLoading(true);
     setProgress(0);
     setError(null);
+    setOriginalInput({ noteText, fileData });
 
     try {
       const body = { language, furigana };
@@ -97,9 +99,14 @@ function AppInner() {
         body.noteText = fileData?.text ?? noteText;
       }
 
+      // Attach auth token so server can determine pro status
+      const token = await getAccessToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch('/api/generate', {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body:    JSON.stringify(body),
         signal:  controller.signal,
       });
@@ -212,6 +219,7 @@ function AppInner() {
         <ResultsView
           content={generated}
           contentId={contentId}
+          originalInput={originalInput}
           furigana={furigana}
           isJapanese={isJapanese}
           onBack={() => setView('home')}

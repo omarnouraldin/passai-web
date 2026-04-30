@@ -129,7 +129,7 @@ Rules: 5+ flashcards, 4 quiz questions, exactly 4 options each, vary correct ans
       },
       body: JSON.stringify({
         model,
-        max_tokens: 4000,
+        max_tokens: 5000,
         stream: true,
         messages: [{ role: 'user', content: messageContent }],
       }),
@@ -176,10 +176,11 @@ Rules: 5+ flashcards, 4 quiz questions, exactly 4 options each, vary correct ans
     }
 
     send({ type: 'progress', value: 96 });
-    const cleanText = fullText.trim()
-      .replace(/^```json\s*/im, '').replace(/^```\s*/im, '').replace(/```\s*$/im, '').trim();
-    console.log('Preview:', cleanText.slice(0, 80));
-    const parsed = JSON.parse(cleanText);
+    // Robust JSON extraction — find first { and last } to handle any extra text Haiku adds
+    const jsonStart = fullText.indexOf('{');
+    const jsonEnd   = fullText.lastIndexOf('}');
+    if (jsonStart === -1 || jsonEnd === -1) throw new Error('No JSON object found in response');
+    const parsed = JSON.parse(fullText.slice(jsonStart, jsonEnd + 1));
     send({ type: 'progress', value: 100 });
     send({ type: 'result', data: parsed });
 

@@ -1,46 +1,55 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import FuriganaText from '../FuriganaText.jsx';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
-function shuffle(arr) {
+// ── Deterministic shuffle — same question always produces same order ───────────
+// This makes saved answer indices always valid across app reloads.
+function hashSeed(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = Math.imul(31, h) + str.charCodeAt(i) | 0;
+  return Math.abs(h);
+}
+
+function seededShuffle(arr, seed) {
   const a = [...arr];
+  let s = (seed | 1) >>> 0;
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    s = Math.imul(1664525, s) + 1013904223 | 0;
+    const j = (s >>> 0) % (i + 1);
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
-// Build shuffled option list per question once per quiz attempt
-function buildShuffled(questions) {
-  return questions.map(q => {
-    const correct = q.options[q.correctIndex];
-    const shuffled = shuffle(q.options);
+function buildShuffled(questions, retakeKey) {
+  return questions.map((q, qi) => {
+    const correct  = q.options[q.correctIndex];
+    // Multiply seed by (retakeKey + 1) so each retake gets a different order
+    const seed     = hashSeed(q.question + qi) * (retakeKey + 1);
+    const shuffled = seededShuffle(q.options, Math.abs(seed));
     return { shuffled, correctIndex: shuffled.indexOf(correct) };
   });
 }
 
-function QuizCard({ question, shuffledData, qIdx, total, answer, onAnswer, furigana, isJapanese }) {
+// ── Single quiz card ──────────────────────────────────────────────────────────
+function QuizCard({ question, shuffledData, qIdx, answer, onAnswer, furigana, isJapanese }) {
   const { shuffled, correctIndex } = shuffledData;
   const answered = answer !== undefined;
 
   return (
     <div style={{ marginBottom: 32 }}>
-      {/* Question */}
       <div className="quiz-question-text">
         <span style={{ color: 'var(--accent)', marginRight: 8 }}>Q{qIdx + 1}.</span>
         <FuriganaText text={question.question} furigana={furigana} />
       </div>
 
-      {/* Options */}
       {shuffled.map((opt, i) => {
         let cls = 'quiz-option';
         if (answered) {
           if (i === correctIndex) cls += ' correct';
           else if (i === answer)  cls += ' wrong';
         }
-
         return (
           <button
             key={i}
@@ -54,7 +63,6 @@ function QuizCard({ question, shuffledData, qIdx, total, answer, onAnswer, furig
         );
       })}
 
-      {/* Explanation */}
       {answered && (
         <div className="explanation-box">
           💡 <FuriganaText text={question.explanation} furigana={furigana} />
@@ -64,17 +72,39 @@ function QuizCard({ question, shuffledData, qIdx, total, answer, onAnswer, furig
   );
 }
 
-export default function QuizTab({ questions, furigana, isJapanese }) {
-  const [answers, setAnswers]       = useState({});
-  const [retakeKey, setRetakeKey]   = useState(0);
+// ── Tab ───────────────────────────────────────────────────────────────────────
+export default function QuizTab({ questions, furigana, isJapanese, contentId }) {
+  const storageKey = contentId ? `passai_qz_${contentId}` : null;
 
-  // Re-shuffle on each retake
-  const shuffledData = useMemo(() => buildShuffled(questions), [questions, retakeKey]);
+  // Load saved state { answers, retakeKey }
+  const [answers,   setAnswers]   = useState(() => {
+    if (!storageKey) return {};
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey));
+      return saved?.answers ?? {};
+    } catch { return {}; }
+  });
+  const [retakeKey, setRetakeKey] = useState(() => {
+    if (!storageKey) return 0;
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey));
+      return saved?.retakeKey ?? 0;
+    } catch { return 0; }
+  });
 
-  const total     = questions.length;
-  const answered  = Object.keys(answers).length;
-  const allDone   = answered === total;
-  const score     = allDone
+  // Save whenever answers or retakeKey change
+  useEffect(() => {
+    if (!storageKey) return;
+    localStorage.setItem(storageKey, JSON.stringify({ answers, retakeKey }));
+  }, [answers, retakeKey, storageKey]);
+
+  // Deterministic shuffle — same seed per (question + retakeKey)
+  const shuffledData = useMemo(() => buildShuffled(questions, retakeKey), [questions, retakeKey]);
+
+  const total    = questions.length;
+  const answered = Object.keys(answers).length;
+  const allDone  = answered === total;
+  const score    = allDone
     ? Object.entries(answers).filter(([qi, ai]) => shuffledData[+qi].correctIndex === ai).length
     : null;
 
@@ -85,6 +115,7 @@ export default function QuizTab({ questions, furigana, isJapanese }) {
   function retake() {
     setAnswers({});
     setRetakeKey(k => k + 1);
+    if (storageKey) localStorage.removeItem(storageKey);
   }
 
   return (
@@ -110,7 +141,7 @@ export default function QuizTab({ questions, furigana, isJapanese }) {
         ))}
       </div>
 
-      {/* Score banner (shown when all answered) */}
+      {/* Score banner */}
       {allDone && (
         <div className="quiz-score" style={{ marginBottom: 24 }}>
           <div className="quiz-score-num">{score}/{total}</div>
@@ -122,14 +153,12 @@ export default function QuizTab({ questions, furigana, isJapanese }) {
         </div>
       )}
 
-      {/* Questions */}
       {questions.map((q, i) => (
         <QuizCard
           key={`${retakeKey}-${i}`}
           question={q}
           shuffledData={shuffledData[i]}
           qIdx={i}
-          total={total}
           answer={answers[i]}
           onAnswer={handleAnswer}
           furigana={furigana}

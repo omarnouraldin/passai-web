@@ -40,7 +40,13 @@ Wrap every other kanji like this: 【漢字|かんじ】 — use 【 and 】 exa
     languageInstruction = 'All text values in the JSON must be written in English.';
   }
 
-  const keywordInstruction = `For the most critical keywords (3-5 per section), wrap them in 《》 like: 《mitochondria》 or 《二次関数》. These show in red in the app. Apply only to the single most important word or short phrase — never full sentences.`;
+  const keywordInstruction = `Use these color markup tags to make key content stand out (students remember colored text better):
+- 《term》 → RED — the single most critical keyword per section (must-memorize terms)
+- 〔concept〕 → ORANGE — important concepts and definitions (things to understand deeply)
+- ｛example｝ → BLUE — examples, numbers, or analogies that illustrate a point
+Apply markup to individual words or short phrases only — never full sentences. Use 2-4 highlights per section.`;
+
+  const illustrationInstruction = `ILLUSTRATION: In "illustrationQuery", provide ONE specific search term in ${language === 'japanese' ? 'Japanese (日本語)' : 'English'} to find a helpful Wikipedia image for this topic. Be specific (e.g. "${language === 'japanese' ? '二次関数 グラフ' : 'quadratic function parabola'}"). Return null if no visual would help.`;
 
   const contentDescription = hasImage
     ? 'A student has provided an image of their study material (notes, textbook page, or problem sheet).'
@@ -67,11 +73,7 @@ CORRECTIONS:
 - If you find errors, write: "Incorrect: [what they wrote]. Correct: [what it should be] because [reason]."
 - If everything is correct, return an empty array []
 
-ILLUSTRATION:
-- In illustrationQuery, provide ONE specific English search term to find a helpful Wikipedia image
-- Be specific: "quadratic function parabola" not just "math"
-- Good examples: "mitochondria diagram", "supply demand curve", "Newton second law", "quadratic equation graph"
-- Return null if the topic is abstract or wouldn't benefit from a visual
+${illustrationInstruction}
 
 Please respond in valid JSON with EXACTLY these keys:
 {

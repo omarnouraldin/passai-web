@@ -19,14 +19,15 @@ function loadLocalHistory() {
 function AppInner() {
   const { user } = useAuth();
 
-  const [view,      setView]      = useState('home');   // 'home' | 'results' | 'history'
-  const [isLoading, setIsLoading] = useState(false);
-  const [generated, setGenerated] = useState(null);
-  const [history,   setHistory]   = useState(loadLocalHistory);
-  const [language,  setLanguage]  = useState('english');
-  const [furigana,  setFurigana]  = useState(false);
-  const [error,     setError]     = useState(null);
-  const [toast,     setToast]     = useState(null);    // { msg, type }
+  const [view,        setView]      = useState('home');   // 'home' | 'results' | 'history'
+  const [isLoading,   setIsLoading] = useState(false);
+  const [generated,   setGenerated] = useState(null);
+  const [contentId,   setContentId] = useState(null);
+  const [history,     setHistory]   = useState(loadLocalHistory);
+  const [language,    setLanguage]  = useState('english');
+  const [furigana,    setFurigana]  = useState(false);
+  const [error,       setError]     = useState(null);
+  const [toast,       setToast]     = useState(null);    // { msg, type }
 
   const isJapanese = language === 'japanese';
 
@@ -101,6 +102,7 @@ function AppInner() {
 
       setHistory(h => [item, ...h]);
       setGenerated(data);
+      setContentId(item.id);
       setView('results');
 
       // Sync to Supabase if logged in
@@ -120,6 +122,7 @@ function AppInner() {
 
   function openHistoryItem(item) {
     setGenerated(item.content);
+    setContentId(item.id);
     setView('results');
   }
 
@@ -160,6 +163,7 @@ function AppInner() {
       {view === 'results' && generated && (
         <ResultsView
           content={generated}
+          contentId={contentId}
           furigana={furigana}
           isJapanese={isJapanese}
           onBack={() => setView('home')}

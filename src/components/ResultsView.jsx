@@ -35,7 +35,7 @@ function buildShareText(content, isJapanese) {
   return lines.join('\n');
 }
 
-export default function ResultsView({ content, furigana, isJapanese, onBack, onToast }) {
+export default function ResultsView({ content, contentId, furigana, isJapanese, onBack, onToast }) {
   const tabDefs = isJapanese
     ? ['簡単解説', '要約', 'トピック', 'フラッシュカード', 'クイズ']
     : ['Simple', 'Summary', 'Topics', 'Flashcards', 'Quiz'];
@@ -122,8 +122,8 @@ export default function ResultsView({ content, furigana, isJapanese, onBack, onT
       )}
       {activeTab === 1 && <SummaryTab    summary={content.summary}    furigana={furigana} isJapanese={isJapanese} />}
       {activeTab === 2 && <TopicsTab     topics={content.keyTopics}   furigana={furigana} isJapanese={isJapanese} />}
-      {activeTab === 3 && <FlashcardsTab cards={content.flashcards}   furigana={furigana} isJapanese={isJapanese} />}
-      {activeTab === 4 && <QuizTab       questions={content.quiz}      furigana={furigana} isJapanese={isJapanese} />}
+      {activeTab === 3 && <FlashcardsTab cards={content.flashcards}   furigana={furigana} isJapanese={isJapanese} contentId={contentId} />}
+      {activeTab === 4 && <QuizTab       questions={content.quiz}      furigana={furigana} isJapanese={isJapanese} contentId={contentId} />}
     </div>
   );
 }

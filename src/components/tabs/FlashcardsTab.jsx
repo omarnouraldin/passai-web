@@ -1,13 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import FuriganaText from '../FuriganaText.jsx';
 
-// ── Single card component ─────────────────────────────────────────────────────
-function FlashCard({ card, index, total, furigana, isJapanese, onVerdict, verdict }) {
+// ── Single card ───────────────────────────────────────────────────────────────
+function FlashCard({ card, index, furigana, isJapanese, onVerdict, verdict }) {
   const [flipped, setFlipped] = useState(false);
 
   function handleVerdict(v) {
     onVerdict(index, v);
-    // Auto-advance: briefly show the verdict then flip back
     setTimeout(() => setFlipped(false), 300);
   }
 
@@ -46,7 +45,7 @@ function FlashCard({ card, index, total, furigana, isJapanese, onVerdict, verdic
         </div>
       </div>
 
-      {/* Know / Don't Know — only show when flipped */}
+      {/* Know / Don't Know — only when flipped */}
       {flipped && (
         <div className="flashcard-verdict">
           <button
@@ -67,11 +66,24 @@ function FlashCard({ card, index, total, furigana, isJapanese, onVerdict, verdic
   );
 }
 
-// ── Tab component ─────────────────────────────────────────────────────────────
-export default function FlashcardsTab({ cards, furigana, isJapanese }) {
+// ── Tab ───────────────────────────────────────────────────────────────────────
+export default function FlashcardsTab({ cards, furigana, isJapanese, contentId }) {
+  const storageKey = contentId ? `passai_fc_${contentId}` : null;
+
+  // Load saved verdicts
+  const [verdicts, setVerdicts] = useState(() => {
+    if (!storageKey) return {};
+    try { return JSON.parse(localStorage.getItem(storageKey)) ?? {}; }
+    catch { return {}; }
+  });
   const [idx,      setIdx]      = useState(0);
-  const [verdicts, setVerdicts] = useState({});  // { [cardIndex]: 'know' | 'skip' }
-  const [retrying, setRetrying] = useState(false);  // reviewing "don't know" pile
+  const [retrying, setRetrying] = useState(false);
+
+  // Persist verdicts whenever they change
+  useEffect(() => {
+    if (!storageKey) return;
+    localStorage.setItem(storageKey, JSON.stringify(verdicts));
+  }, [verdicts, storageKey]);
 
   if (!cards?.length) return null;
 
@@ -79,22 +91,18 @@ export default function FlashcardsTab({ cards, furigana, isJapanese }) {
     ? cards.map((c, i) => ({ ...c, _origIdx: i })).filter(c => verdicts[c._origIdx] === 'skip')
     : cards.map((c, i) => ({ ...c, _origIdx: i }));
 
-  const currentCard   = activeCards[idx];
-  const knownCount    = Object.values(verdicts).filter(v => v === 'know').length;
-  const skipCount     = Object.values(verdicts).filter(v => v === 'skip').length;
-  const allAnswered   = activeCards.length > 0 && activeCards.every(c => verdicts[c._origIdx] !== undefined);
+  const currentCard = activeCards[Math.min(idx, activeCards.length - 1)];
+  const knownCount  = Object.values(verdicts).filter(v => v === 'know').length;
+  const skipCount   = Object.values(verdicts).filter(v => v === 'skip').length;
+  const allAnswered = activeCards.length > 0 && activeCards.every(c => verdicts[c._origIdx] !== undefined);
 
   function handleVerdict(cardIndex, v) {
     setVerdicts(prev => ({ ...prev, [cardIndex]: v }));
-    // Auto-advance to next card after short delay
-    setTimeout(() => {
-      setIdx(i => Math.min(i + 1, activeCards.length - 1));
-    }, 400);
+    setTimeout(() => setIdx(i => Math.min(i + 1, activeCards.length - 1)), 400);
   }
 
   function startRetry() {
     setIdx(0);
-    // Clear only the "skip" verdicts so they appear fresh
     setVerdicts(prev => {
       const next = { ...prev };
       Object.keys(next).forEach(k => { if (next[k] === 'skip') delete next[k]; });
@@ -107,6 +115,7 @@ export default function FlashcardsTab({ cards, furigana, isJapanese }) {
     setIdx(0);
     setVerdicts({});
     setRetrying(false);
+    if (storageKey) localStorage.removeItem(storageKey);
   }
 
   return (
@@ -117,15 +126,12 @@ export default function FlashcardsTab({ cards, furigana, isJapanese }) {
             ? (isJapanese ? 'もう一度練習' : 'Practice again')
             : (isJapanese ? 'フラッシュカード' : 'Flashcards')}
         </div>
-        {/* Progress indicator */}
         <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>
-          {isJapanese
-            ? `✓ ${knownCount}  ✗ ${skipCount}`
-            : `✓ ${knownCount}  ✗ ${skipCount}`}
+          ✓ {knownCount} &nbsp; ✗ {skipCount}
         </span>
       </div>
 
-      {/* Retry banner — shows when all cards answered and some are "don't know" */}
+      {/* Retry banner */}
       {allAnswered && skipCount > 0 && !retrying && (
         <div className="retry-banner">
           <div className="retry-badge">
@@ -154,7 +160,6 @@ export default function FlashcardsTab({ cards, furigana, isJapanese }) {
           key={`${currentCard._origIdx}-${retrying}`}
           card={currentCard}
           index={currentCard._origIdx}
-          total={activeCards.length}
           furigana={furigana}
           isJapanese={isJapanese}
           onVerdict={handleVerdict}
@@ -162,7 +167,7 @@ export default function FlashcardsTab({ cards, furigana, isJapanese }) {
         />
       )}
 
-      {/* Prev / Next navigation */}
+      {/* Prev / Next */}
       <div style={{ display: 'flex', gap: 8, marginTop: 16, alignItems: 'center' }}>
         <button
           className="btn btn-ghost"
@@ -173,19 +178,18 @@ export default function FlashcardsTab({ cards, furigana, isJapanese }) {
           ← {isJapanese ? '前' : 'Prev'}
         </button>
         <span className="card-counter" style={{ flexShrink: 0 }}>
-          {idx + 1} / {activeCards.length}
+          {Math.min(idx + 1, activeCards.length)} / {activeCards.length}
         </span>
         <button
           className="btn btn-ghost"
           style={{ flex: 1 }}
-          disabled={idx === activeCards.length - 1}
+          disabled={idx >= activeCards.length - 1}
           onClick={() => setIdx(i => i + 1)}
         >
           {isJapanese ? '次' : 'Next'} →
         </button>
       </div>
 
-      {/* Reset link */}
       {Object.keys(verdicts).length > 0 && (
         <div style={{ textAlign: 'center', marginTop: 14 }}>
           <button

@@ -4,6 +4,12 @@
 :root {
   /* Dark theme (default) */
   --bg:           #08080e;
+  /* Highlight colors — readable on dark backgrounds */
+  --color-red:    #ff453a;
+  --color-amber:  #ff9f0a;
+  --color-teal:   #5ac8fa;
+  --color-green:  #30d158;
+  --color-purple: #bf5af2;
   --surface:      #10101a;
   --card:         #16161f;
   --card-hover:   #1d1d28;
@@ -27,6 +33,12 @@
 
 [data-theme="light"] {
   --bg:           #f2f2f7;
+  /* Highlight colors — readable on light backgrounds */
+  --color-red:    #d70015;
+  --color-amber:  #b25000;
+  --color-teal:   #0071a4;
+  --color-green:  #1a7f37;
+  --color-purple: #7a28c8;
   --surface:      #ffffff;
   --card:         #ffffff;
   --card-hover:   #f7f7fc;

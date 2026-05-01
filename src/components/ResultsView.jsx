@@ -143,6 +143,7 @@ export default function ResultsView({ content, contentId, originalInput, furigan
       {activeTab === 0 && (
         <SimpleTab
           summary={content.summary}
+          highlightStat={content.highlightStat}
           simpleExplanation={content.simpleExplanation}
           thinkingQuestions={content.thinkingQuestions}
           corrections={content.corrections}

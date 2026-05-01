@@ -80,28 +80,45 @@ ${languageInstruction}
 
 ${keywordInstruction}
 
-YOUR MISSION: Don't just summarize — TEACH. Structure your explanation in THREE layers:
+YOUR MISSION: Don't just summarize — TEACH. Structure your response carefully:
 
-LAYER 1 — summary: Write 2-3 punchy sentences. This is the "30-second version" — the absolute core idea a student must grasp instantly. Be direct and concrete, not vague.
+── SUMMARY (30-second version) ──
+Write a punchy, scannable summary using this exact format:
+- 1 short hook sentence (the core problem or concept — make it concrete, not textbook)
+- Then 3-5 bullet lines starting with 👉 covering: key fact, the contrast/gap, reason why, and conclusion
+- Be direct. Use real numbers and specific examples. NO vague academic language.
+- Language: ${language === 'japanese' ? 'Japanese (日本語)' : 'English'}
 
-LAYER 2 — simpleExplanation: Structured step-by-step breakdown. CRITICAL RULES for steps:
-- Each step = EXACTLY ONE idea. Short. Direct. No padding.
-- Format every step as: "Step N｜Label\nOne clear sentence explaining that single idea."
-- For math/science: show a worked example with numbered steps, explain WHY each step is done
-- Use everyday analogies starting with "Think of it like..." or "Imagine..."
-- Use plain language for formulas
+── HIGHLIGHT STAT ──
+Find the single most dramatic number, contrast, or gap in the content.
+Return as: { "label": "short label", "from": "left side", "to": "right side", "magnitude": "the shocking number or %" }
+Example: { "label": "Price gap", "from": "👨‍🌾 Farmer: ¥2", "to": "☕ Consumer: ¥2000", "magnitude": "+7000%" }
+Return null if no dramatic contrast exists.
 
-LAYER 3 — thinkingQuestions: 2 short questions that make the student THINK before the quiz. Not recall questions — questions that require connecting ideas. These prime the brain for the quiz.
+── SIMPLE EXPLANATION (step-by-step) ──
+CRITICAL RULES:
+- Each step = EXACTLY ONE idea. Never put 2 ideas in one step.
+- Format: "Step N｜Short Label\nOne sentence. If needed, add 👉 sub-points on new lines starting with 👉"
+- For complex steps: use 👉 micro-headlines to break it down (👉 表向き: / 👉 現実: / 👉 結果:)
+- For math/science: show worked examples with numbered steps, explain WHY
+- Analogies: ${language === 'japanese' ? 'Use "たとえば：" followed by a Japanese real-life comparison. Never use English "Think of it like"' : 'Start with "Think of it like..." using a concrete everyday comparison'}
+- If a topic has 4+ ideas, split into more steps rather than cramming
 
-CORRECTIONS: Check for errors. List as "Incorrect: X. Correct: Y because Z." Return [] if correct.
+── THINKING QUESTIONS ──
+Write 2 questions that feel like real conversation, not exams.
+Good format: "もし〇〇がなかったら、誰が一番困ると思う？"
+Goal: make students go "huh, I never thought about that" — not just recall facts.
+
+CORRECTIONS: Check for errors. List each as "Incorrect: X. Correct: Y because Z." Return [] if correct.
 
 ${illustrationInstruction}
 
 Respond in valid JSON with EXACTLY these keys:
 {
-  "summary": "2-3 punchy sentences — the 30-second core idea",
-  "simpleExplanation": "Step-by-step with each step as one idea only, analogies, and worked examples for math.",
-  "thinkingQuestions": ["Question that connects ideas?", "Question that challenges assumptions?"],
+  "summary": "Hook sentence\\n👉 key fact\\n👉 the contrast\\n👉 reason why\\n👉 conclusion",
+  "highlightStat": { "label": "...", "from": "...", "to": "...", "magnitude": "..." },
+  "simpleExplanation": "Step 1｜Label\\nOne idea.\\n👉 sub-point if needed\\n\\nStep 2｜Label\\n...",
+  "thinkingQuestions": ["Conversational question 1?", "Conversational question 2?"],
   "corrections": [],
   "illustrationQuery": "search term or null",
   "keyTopics": ["topic1", "topic2", "topic3"],

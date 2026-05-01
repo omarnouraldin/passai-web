@@ -19,8 +19,7 @@ async function fetchWikiImage(query, isJapanese) {
     const title = searchData?.query?.search?.[0]?.title;
     if (!title) return null;
     const summaryUrl = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
-    const summaryRes  = await fetch(summaryUrl);
-    const summaryData = await summaryRes.json();
+    const summaryData = await (await fetch(summaryUrl)).json();
     if (summaryData?.thumbnail?.source) {
       return { src: summaryData.thumbnail.source, caption: summaryData.title, url: summaryData.content_urls?.desktop?.page };
     }
@@ -28,43 +27,78 @@ async function fetchWikiImage(query, isJapanese) {
   } catch { return null; }
 }
 
-// ── Step / analogy / formula renderer ────────────────────────────────────────
-function ExplanationText({ text, furigana }) {
+// ── Render a block of text that may contain 👉 bullet lines ──────────────────
+function BulletText({ text, furigana, baseSize = 14 }) {
   if (!text) return null;
-  const paragraphs = text.split(/\n+/);
-  let stepCounter = 0;
-
+  const lines = text.split('\n').filter(l => l.trim());
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {paragraphs.map((para, i) => {
-        if (!para.trim()) return null;
-
-        // Step lines: "Step 1｜Label" or "Step 1:" or "ステップ1:"
-        const stepMatch = para.match(/^(Step\s*\d+[｜|]?\s*\S*|ステップ\s*\d+[｜|]?\s*\S*|手順\s*\d+[｜|]?\s*\S*|STEP\s*\d+[｜|]?\s*\S*)/i);
-        if (stepMatch) {
-          const palette = STEP_PALETTES[stepCounter % STEP_PALETTES.length];
-          stepCounter++;
-          const label = stepMatch[0].replace(/[：:]\s*$/, '').trim();
-          const body  = para.slice(stepMatch[0].length).replace(/^[：:\s]+/, '').trim();
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {lines.map((line, i) => {
+        if (line.startsWith('👉')) {
+          const content = line.slice(1).trim();
           return (
-            <div key={i} style={{
-              background: palette.bg, border: `1px solid ${palette.border}`,
-              borderLeft: `3px solid ${palette.accent}`,
-              borderRadius: '0 var(--radius-sm) var(--radius-sm) 0', padding: '12px 16px',
-            }}>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: palette.accent, marginBottom: 6 }}>
-                {label}
-              </div>
-              <div style={{ fontSize: 15, lineHeight: 1.75, color: 'var(--text)' }}>
-                <FuriganaText text={body} furigana={furigana} />
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <span style={{ color: 'var(--accent)', fontWeight: 700, flexShrink: 0, fontSize: baseSize }}>👉</span>
+              <div style={{ fontSize: baseSize, lineHeight: 1.65, color: 'var(--text-2)' }}>
+                <FuriganaText text={content} furigana={furigana} />
               </div>
             </div>
           );
         }
+        return (
+          <div key={i} style={{ fontSize: baseSize, lineHeight: 1.75, color: 'var(--text)' }}>
+            <FuriganaText text={line} furigana={furigana} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-        // Analogy lines
-        const analogyRx = /^(Think of it|Imagine|For example|Example:|たとえば|例えば|イメージ|具体例)/i;
-        if (analogyRx.test(para)) {
+// ── Step card — supports 👉 micro-bullets inside ──────────────────────────────
+function StepCard({ label, body, palette, furigana }) {
+  return (
+    <div style={{
+      background: palette.bg, border: `1px solid ${palette.border}`,
+      borderLeft: `3px solid ${palette.accent}`,
+      borderRadius: '0 var(--radius-sm) var(--radius-sm) 0', padding: '12px 16px',
+    }}>
+      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: palette.accent, marginBottom: 8 }}>
+        {label}
+      </div>
+      <BulletText text={body} furigana={furigana} baseSize={14} />
+    </div>
+  );
+}
+
+// ── Full explanation renderer ──────────────────────────────────────────────────
+function ExplanationText({ text, furigana }) {
+  if (!text) return null;
+  const paragraphs = text.split(/\n{2,}/);
+  let stepCounter = 0;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {paragraphs.map((para, i) => {
+        if (!para.trim()) return null;
+
+        // Step block: "Step N｜Label" on first line, rest is body
+        const stepMatch = para.match(/^(Step\s*\d+[｜|─\-]?\s*.+?)[\n\r]/i)
+          || para.match(/^(Step\s*\d+[｜|─\-]?\s*.+)$/i)
+          || para.match(/^(ステップ\s*\d+[｜|]?\s*.+?)[\n\r]/i);
+
+        if (stepMatch || /^(Step\s*\d+|ステップ\s*\d+|手順\s*\d+)/i.test(para)) {
+          const palette  = STEP_PALETTES[stepCounter % STEP_PALETTES.length];
+          stepCounter++;
+          const firstNewline = para.indexOf('\n');
+          const label = firstNewline > -1 ? para.slice(0, firstNewline).trim() : para.trim();
+          const body  = firstNewline > -1 ? para.slice(firstNewline + 1).trim() : '';
+          return <StepCard key={i} label={label} body={body} palette={palette} furigana={furigana} />;
+        }
+
+        // Analogy lines (Japanese and English)
+        const analogyRx = /^(Think of it|Imagine|For example|Example:|たとえば[：:]?|例えば[：:]?|イメージ|具体例)/i;
+        if (analogyRx.test(para.trim())) {
           return (
             <div key={i} style={{
               background: 'rgba(90,200,250,0.08)', border: '1px solid rgba(90,200,250,0.25)',
@@ -81,7 +115,7 @@ function ExplanationText({ text, furigana }) {
 
         // Formula / definition lines
         const formulaRx = /^(Formula|Definition|公式|定義|Rule:|ルール)[：:]/i;
-        if (formulaRx.test(para)) {
+        if (formulaRx.test(para.trim())) {
           return (
             <div key={i} style={{
               background: 'rgba(255,159,10,0.09)', border: '1px solid rgba(255,159,10,0.28)',
@@ -96,10 +130,11 @@ function ExplanationText({ text, furigana }) {
           );
         }
 
+        // Plain paragraph (may contain 👉 lines)
         return (
-          <p key={i} style={{ fontSize: 15, lineHeight: 1.85, color: 'var(--text)', margin: 0 }}>
-            <FuriganaText text={para} furigana={furigana} />
-          </p>
+          <div key={i} style={{ fontSize: 15, lineHeight: 1.85, color: 'var(--text)' }}>
+            <BulletText text={para} furigana={furigana} baseSize={15} />
+          </div>
         );
       })}
     </div>
@@ -107,7 +142,7 @@ function ExplanationText({ text, furigana }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function SimpleTab({ summary, simpleExplanation, thinkingQuestions, corrections, illustrationQuery, furigana, isJapanese }) {
+export default function SimpleTab({ summary, highlightStat, simpleExplanation, thinkingQuestions, corrections, illustrationQuery, furigana, isJapanese }) {
   const [wikiImage,  setWikiImage]  = useState(null);
   const [imgLoading, setImgLoading] = useState(false);
 
@@ -126,69 +161,90 @@ export default function SimpleTab({ summary, simpleExplanation, thinkingQuestion
 
   return (
     <div>
-      {/* ── Corrections banner ────────────────────────────────────────── */}
+      {/* ── Corrections banner ─────────────────────────────────────── */}
       {hasCorrections && (
         <div style={{
           background: 'rgba(255,69,58,0.07)', border: '1px solid rgba(255,69,58,0.25)',
           borderRadius: 'var(--radius)', padding: '16px', marginBottom: 20,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <span style={{ fontSize: 16 }}>⚠️</span>
+            <span>⚠️</span>
             <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-red)', textTransform: 'uppercase', letterSpacing: 1 }}>
               {isJapanese ? '修正が必要な箇所' : 'Corrections found in your notes'}
             </span>
           </div>
           {corrections.map((c, i) => (
-            <div key={i} style={{
-              fontSize: 14, lineHeight: 1.65, color: 'var(--text-2)',
-              paddingTop: i > 0 ? 10 : 0, borderTop: i > 0 ? '1px solid rgba(255,69,58,0.12)' : 'none',
-            }}>
+            <div key={i} style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--text-2)', paddingTop: i > 0 ? 10 : 0, borderTop: i > 0 ? '1px solid rgba(255,69,58,0.12)' : 'none' }}>
               <FuriganaText text={c} furigana={furigana} />
             </div>
           ))}
         </div>
       )}
 
-      {/* ── ⚡ 30-second summary ──────────────────────────────────────── */}
+      {/* ── ⚡ 30-second summary ───────────────────────────────────── */}
       {summary && (
         <div style={{
           background: 'linear-gradient(135deg, rgba(107,96,255,0.13), rgba(10,132,255,0.10))',
-          border: '1px solid rgba(107,96,255,0.28)',
-          borderRadius: 'var(--radius)',
-          padding: '16px 18px',
-          marginBottom: 20,
+          border: '1px solid rgba(107,96,255,0.28)', borderRadius: 'var(--radius)',
+          padding: '16px 18px', marginBottom: 16,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 16 }}>⚡</span>
             <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-purple)', textTransform: 'uppercase', letterSpacing: 1.2 }}>
               {isJapanese ? '30秒まとめ' : '30-Second Summary'}
             </span>
           </div>
-          <p style={{ fontSize: 15, lineHeight: 1.75, color: 'var(--text)', margin: 0 }}>
-            <FuriganaText text={summary} furigana={furigana} />
-          </p>
+          <BulletText text={summary} furigana={furigana} baseSize={15} />
         </div>
       )}
 
-      {/* ── Wikipedia illustration ────────────────────────────────────── */}
+      {/* ── 💥 Highlight stat ──────────────────────────────────────── */}
+      {highlightStat && (
+        <div style={{
+          background: 'rgba(255,55,95,0.07)', border: '1px solid rgba(255,55,95,0.22)',
+          borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 20,
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#ff375f', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 12 }}>
+            💥 {highlightStat.label}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{
+              background: 'var(--card)', border: '1px solid var(--border)',
+              borderRadius: 10, padding: '10px 16px', fontSize: 15, fontWeight: 600, color: 'var(--text)',
+            }}>
+              {highlightStat.from}
+            </div>
+            <div style={{ fontSize: 20, color: 'var(--muted)' }}>→</div>
+            <div style={{
+              background: 'var(--card)', border: '1px solid var(--border)',
+              borderRadius: 10, padding: '10px 16px', fontSize: 15, fontWeight: 600, color: 'var(--text)',
+            }}>
+              {highlightStat.to}
+            </div>
+          </div>
+          {highlightStat.magnitude && (
+            <div style={{ marginTop: 12, fontSize: 22, fontWeight: 800, color: '#ff375f', letterSpacing: -0.5 }}>
+              {highlightStat.magnitude}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Wikipedia illustration ─────────────────────────────────── */}
       {illustrationQuery && (
         <div style={{ marginBottom: 20 }}>
           {imgLoading && (
-            <div style={{
-              height: 100, background: 'var(--card)', border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', color: 'var(--muted)', fontSize: 13,
-            }}>
+            <div style={{ height: 100, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>
               {isJapanese ? '画像を読み込み中...' : 'Loading illustration...'}
             </div>
           )}
           {!imgLoading && wikiImage && (
             <a href={wikiImage.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
                 <img src={wikiImage.src} alt={wikiImage.caption} style={{ width: '100%', maxHeight: 220, objectFit: 'contain', background: '#fff', padding: 12 }} />
                 <div style={{ padding: '9px 14px', fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6, borderTop: '1px solid var(--border)' }}>
-                  <span>📖</span>
-                  <span style={{ flex: 1 }}>{wikiImage.caption}</span>
+                  <span>📖</span><span style={{ flex: 1 }}>{wikiImage.caption}</span>
                   <span style={{ fontSize: 11 }}>{isJapanese ? 'Wikipedia より ↗' : 'via Wikipedia ↗'}</span>
                 </div>
               </div>
@@ -197,7 +253,7 @@ export default function SimpleTab({ summary, simpleExplanation, thinkingQuestion
         </div>
       )}
 
-      {/* ── 🧠 Guided explanation ─────────────────────────────────────── */}
+      {/* ── 🧠 Step-by-step explanation ────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <span style={{ fontSize: 14 }}>🧠</span>
         <div className="section-title" style={{ marginBottom: 0 }}>
@@ -208,13 +264,11 @@ export default function SimpleTab({ summary, simpleExplanation, thinkingQuestion
         <ExplanationText text={simpleExplanation} furigana={furigana} />
       </div>
 
-      {/* ── 🤔 Thinking questions ─────────────────────────────────────── */}
+      {/* ── 🤔 Thinking questions ──────────────────────────────────── */}
       {hasThinkingQuestions && (
         <div style={{
-          background: 'rgba(255,159,10,0.07)',
-          border: '1px solid rgba(255,159,10,0.25)',
-          borderRadius: 'var(--radius)',
-          padding: '16px 18px',
+          background: 'rgba(255,159,10,0.07)', border: '1px solid rgba(255,159,10,0.25)',
+          borderRadius: 'var(--radius)', padding: '16px 18px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 16 }}>🤔</span>

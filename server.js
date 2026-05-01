@@ -99,7 +99,7 @@ Return null if no dramatic contrast exists.
 
 ── SIMPLE EXPLANATION (step-by-step) ──
 CRITICAL RULES:
-- Each step = EXACTLY ONE idea. Split relentlessly — more steps is better than cramming.
+- Each step = EXACTLY ONE idea. Aim for 4-6 steps, MAXIMUM 8. If content needs more, consolidate related ideas into one step — never exceed 8.
 - Format: "Step N｜Short Label\nOne sentence.\n👉 Section header (if needed)\n・sub-item\n・sub-item"
 - Use 👉 ONLY for section headers (👉 なぜ？/ 👉 現実 / 👉 解決). Max 2-3 per step.
 - Use ・ for bullet items under a 👉 header. NEVER 👉 for regular bullets.

@@ -1,10 +1,35 @@
 import { useState } from 'react';
 import SimpleTab     from './tabs/SimpleTab.jsx';
-import SummaryTab    from './tabs/SummaryTab.jsx';
-import TopicsTab     from './tabs/TopicsTab.jsx';
 import FlashcardsTab from './tabs/FlashcardsTab.jsx';
 import QuizTab       from './tabs/QuizTab.jsx';
 import ExamTab       from './tabs/ExamTab.jsx';
+import FuriganaText  from './FuriganaText.jsx';
+
+// ── Combined Overview tab (Summary + Topics) ──────────────────────────────────
+function OverviewTab({ summary, keyTopics, furigana, isJapanese }) {
+  return (
+    <div>
+      {/* Summary */}
+      <div className="section-title">{isJapanese ? '要約' : 'Summary'}</div>
+      <div className="card" style={{ marginBottom: 24 }}>
+        <p className="summary-text">
+          <FuriganaText text={summary} furigana={furigana} />
+        </p>
+      </div>
+
+      {/* Key Topics */}
+      <div className="section-title">{isJapanese ? 'キートピック' : 'Key Topics'}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+        {keyTopics?.map((t, i) => (
+          <span key={i} className="topic-chip">
+            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>✦</span>
+            <FuriganaText text={t} furigana={furigana} />
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function stripMarkup(text = '') {
   return text
@@ -37,9 +62,10 @@ function buildShareText(content, isJapanese) {
 }
 
 export default function ResultsView({ content, contentId, originalInput, furigana, isJapanese, onBack, onToast }) {
+  // 5 tabs: Simple | Overview | Flashcards | Quiz | Exam(PRO)
   const tabDefs = isJapanese
-    ? ['簡単解説', '要約', 'トピック', 'フラッシュカード', 'クイズ', '試験']
-    : ['Simple', 'Summary', 'Topics', 'Flashcards', 'Quiz', 'Exam'];
+    ? ['解説', '概要', 'フラッシュカード', 'クイズ', '試験']
+    : ['Simple', 'Overview', 'Flashcards', 'Quiz', 'Exam'];
 
   const [activeTab, setActiveTab] = useState(0);
   const [copied,    setCopied]    = useState(false);
@@ -73,15 +99,14 @@ export default function ResultsView({ content, contentId, originalInput, furigan
         <div
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: 'rgba(255,69,58,0.09)',
-            border: '1px solid rgba(255,69,58,0.3)',
+            background: 'rgba(255,69,58,0.09)', border: '1px solid rgba(255,69,58,0.3)',
             borderRadius: 50, padding: '5px 12px',
             fontSize: 12, fontWeight: 700, color: 'var(--danger)',
             marginBottom: 16, cursor: 'pointer',
           }}
           onClick={() => setActiveTab(0)}
         >
-          ⚠️ {content.corrections.length} {isJapanese ? '件の修正あり — 簡単解説で確認' : `correction${content.corrections.length > 1 ? 's' : ''} found — see Simple tab`}
+          ⚠️ {content.corrections.length} {isJapanese ? '件の修正あり — 解説で確認' : `correction${content.corrections.length > 1 ? 's' : ''} found — see Simple tab`}
         </div>
       )}
 
@@ -108,7 +133,7 @@ export default function ResultsView({ content, contentId, originalInput, furigan
             {i === 0 && hasCorrections && (
               <span style={{ marginLeft: 5, color: 'var(--danger)' }}>•</span>
             )}
-            {i === 5 && (
+            {i === 4 && (
               <span style={{ marginLeft: 4, fontSize: 10, color: 'var(--color-amber)', fontWeight: 700 }}>PRO</span>
             )}
           </button>
@@ -117,18 +142,36 @@ export default function ResultsView({ content, contentId, originalInput, furigan
 
       {activeTab === 0 && (
         <SimpleTab
+          summary={content.summary}
           simpleExplanation={content.simpleExplanation}
+          thinkingQuestions={content.thinkingQuestions}
           corrections={content.corrections}
           illustrationQuery={content.illustrationQuery}
           furigana={furigana}
           isJapanese={isJapanese}
         />
       )}
-      {activeTab === 1 && <SummaryTab    summary={content.summary}    furigana={furigana} isJapanese={isJapanese} />}
-      {activeTab === 2 && <TopicsTab     topics={content.keyTopics}   furigana={furigana} isJapanese={isJapanese} />}
-      {activeTab === 3 && <FlashcardsTab cards={content.flashcards}   furigana={furigana} isJapanese={isJapanese} contentId={contentId} />}
-      {activeTab === 4 && <QuizTab       questions={content.quiz}      furigana={furigana} isJapanese={isJapanese} contentId={contentId} />}
-      {activeTab === 5 && (
+      {activeTab === 1 && (
+        <OverviewTab
+          summary={content.summary}
+          keyTopics={content.keyTopics}
+          furigana={furigana}
+          isJapanese={isJapanese}
+        />
+      )}
+      {activeTab === 2 && (
+        <FlashcardsTab cards={content.flashcards} furigana={furigana} isJapanese={isJapanese} contentId={contentId} />
+      )}
+      {activeTab === 3 && (
+        <QuizTab
+          questions={content.quiz}
+          thinkingQuestions={content.thinkingQuestions}
+          furigana={furigana}
+          isJapanese={isJapanese}
+          contentId={contentId}
+        />
+      )}
+      {activeTab === 4 && (
         <ExamTab
           originalInput={originalInput}
           furigana={furigana}

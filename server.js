@@ -80,13 +80,18 @@ ${languageInstruction}
 
 ${keywordInstruction}
 
-YOUR MISSION: Don't just summarize — TEACH.
+YOUR MISSION: Don't just summarize — TEACH. Structure your explanation in THREE layers:
 
-MATH & SCIENCE RULES:
-- In simpleExplanation, show a complete worked example with numbered steps (Step 1, Step 2...)
-- Explain WHY each step is done
+LAYER 1 — summary: Write 2-3 punchy sentences. This is the "30-second version" — the absolute core idea a student must grasp instantly. Be direct and concrete, not vague.
+
+LAYER 2 — simpleExplanation: Structured step-by-step breakdown. CRITICAL RULES for steps:
+- Each step = EXACTLY ONE idea. Short. Direct. No padding.
+- Format every step as: "Step N｜Label\nOne clear sentence explaining that single idea."
+- For math/science: show a worked example with numbered steps, explain WHY each step is done
+- Use everyday analogies starting with "Think of it like..." or "Imagine..."
 - Use plain language for formulas
-- Use everyday analogies ("Think of it like...")
+
+LAYER 3 — thinkingQuestions: 2 short questions that make the student THINK before the quiz. Not recall questions — questions that require connecting ideas. These prime the brain for the quiz.
 
 CORRECTIONS: Check for errors. List as "Incorrect: X. Correct: Y because Z." Return [] if correct.
 
@@ -94,8 +99,9 @@ ${illustrationInstruction}
 
 Respond in valid JSON with EXACTLY these keys:
 {
-  "summary": "A clear 2-3 sentence overview",
-  "simpleExplanation": "Thorough plain-language explanation with numbered steps for math/science.",
+  "summary": "2-3 punchy sentences — the 30-second core idea",
+  "simpleExplanation": "Step-by-step with each step as one idea only, analogies, and worked examples for math.",
+  "thinkingQuestions": ["Question that connects ideas?", "Question that challenges assumptions?"],
   "corrections": [],
   "illustrationQuery": "search term or null",
   "keyTopics": ["topic1", "topic2", "topic3"],

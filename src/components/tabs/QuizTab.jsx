@@ -73,7 +73,7 @@ function QuizCard({ question, shuffledData, qIdx, answer, onAnswer, furigana, is
 }
 
 // ── Tab ───────────────────────────────────────────────────────────────────────
-export default function QuizTab({ questions, furigana, isJapanese, contentId }) {
+export default function QuizTab({ questions, thinkingQuestions, furigana, isJapanese, contentId }) {
   const storageKey = contentId ? `passai_qz_${contentId}` : null;
 
   // Load saved state { answers, retakeKey }
@@ -120,6 +120,34 @@ export default function QuizTab({ questions, furigana, isJapanese, contentId }) 
 
   return (
     <div>
+      {/* 🤔 Thinking questions warm-up — only shown before any answers */}
+      {thinkingQuestions?.length > 0 && answered === 0 && (
+        <div style={{
+          background: 'rgba(255,159,10,0.07)',
+          border: '1px solid rgba(255,159,10,0.25)',
+          borderRadius: 'var(--radius)',
+          padding: '16px 18px',
+          marginBottom: 24,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 16 }}>🤔</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-amber)', textTransform: 'uppercase', letterSpacing: 1.2 }}>
+              {isJapanese ? '考えてみよう' : 'Think About It First'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {thinkingQuestions.map((q, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <span style={{ color: 'var(--color-amber)', fontWeight: 700, flexShrink: 0, fontSize: 14 }}>{i + 1}.</span>
+                <div style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text)' }}>
+                  <FuriganaText text={q} furigana={furigana} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div className="section-title" style={{ marginBottom: 0 }}>
           {isJapanese ? 'クイズ' : 'Quiz'}

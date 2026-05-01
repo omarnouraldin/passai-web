@@ -27,24 +27,43 @@ async function fetchWikiImage(query, isJapanese) {
   } catch { return null; }
 }
 
-// ── Render a block of text that may contain 👉 bullet lines ──────────────────
+// ── Render a block of text with 👉 headers and ・ sub-bullets ────────────────
 function BulletText({ text, furigana, baseSize = 14 }) {
   if (!text) return null;
-  const lines = text.split('\n').filter(l => l.trim());
+  // Sanitize broken Unicode in case anything slips through
+  const clean = text.replace(/\uFFFD/g, '').trim();
+  const lines  = clean.split('\n').filter(l => l.trim());
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       {lines.map((line, i) => {
+        // 👉 — section header / key transition (used sparingly)
         if (line.startsWith('👉')) {
           const content = line.slice(1).trim();
           return (
-            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-              <span style={{ color: 'var(--accent)', fontWeight: 700, flexShrink: 0, fontSize: baseSize }}>👉</span>
-              <div style={{ fontSize: baseSize, lineHeight: 1.65, color: 'var(--text-2)' }}>
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: i > 0 ? 4 : 0 }}>
+              <span style={{ color: 'var(--accent)', fontWeight: 700, flexShrink: 0, fontSize: baseSize, lineHeight: 1.6 }}>👉</span>
+              <div style={{ fontSize: baseSize, lineHeight: 1.6, color: 'var(--text)', fontWeight: 600 }}>
                 <FuriganaText text={content} furigana={furigana} />
               </div>
             </div>
           );
         }
+
+        // ・ — sub-bullet (lighter, indented)
+        if (line.startsWith('・') || line.startsWith('•') || line.startsWith('- ')) {
+          const content = line.replace(/^[・•\-]\s*/, '');
+          return (
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', paddingLeft: 20 }}>
+              <span style={{ color: 'var(--muted)', flexShrink: 0, fontSize: 12, lineHeight: 1.8 }}>•</span>
+              <div style={{ fontSize: baseSize - 1, lineHeight: 1.65, color: 'var(--text-2)' }}>
+                <FuriganaText text={content} furigana={furigana} />
+              </div>
+            </div>
+          );
+        }
+
+        // Plain line
         return (
           <div key={i} style={{ fontSize: baseSize, lineHeight: 1.75, color: 'var(--text)' }}>
             <FuriganaText text={line} furigana={furigana} />
@@ -185,8 +204,10 @@ export default function SimpleTab({ summary, highlightStat, simpleExplanation, t
       {summary && (
         <div style={{
           background: 'linear-gradient(135deg, rgba(107,96,255,0.13), rgba(10,132,255,0.10))',
-          border: '1px solid rgba(107,96,255,0.28)', borderRadius: 'var(--radius)',
-          padding: '16px 18px', marginBottom: 16,
+          border: '1px solid rgba(107,96,255,0.28)',
+          borderRadius: highlightStat ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)',
+          padding: '16px 18px',
+          marginBottom: highlightStat ? 0 : 20,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 16 }}>⚡</span>
@@ -201,8 +222,11 @@ export default function SimpleTab({ summary, highlightStat, simpleExplanation, t
       {/* ── 💥 Highlight stat ──────────────────────────────────────── */}
       {highlightStat && (
         <div style={{
-          background: 'rgba(255,55,95,0.07)', border: '1px solid rgba(255,55,95,0.22)',
-          borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 20,
+          background: 'rgba(255,55,95,0.07)',
+          border: '1px solid rgba(107,96,255,0.28)',
+          borderTop: 'none',
+          borderRadius: '0 0 var(--radius) var(--radius)',
+          padding: '14px 18px', marginBottom: 20,
           textAlign: 'center',
         }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: '#ff375f', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 12 }}>

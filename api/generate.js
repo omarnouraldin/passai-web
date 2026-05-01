@@ -87,42 +87,46 @@ ${keywordInstruction}
 YOUR MISSION: Don't just summarize — TEACH. Structure your response carefully:
 
 ── SUMMARY (30-second version) ──
-Write a punchy, scannable summary using this exact format:
-- 1 short hook sentence (the core problem or concept — make it concrete, not textbook)
-- Then 3-5 bullet lines starting with 👉 covering: key fact, the contrast/gap, reason why, and conclusion
-- Be direct. Use real numbers and specific examples. NO vague academic language.
+TIGHT. Max 50 words total. Every word must earn its place.
+Format:
+- 1 hook sentence (max 12 words — the core truth, concrete not academic)
+- 3-5 lines starting with 👉 (max 8 words each — fragments are fine, no full sentences)
+- Under a 👉 line, use ・ for sub-items (never nest 👉 inside 👉)
+- Include the most dramatic number or contrast
 - Language: ${language === 'japanese' ? 'Japanese (日本語)' : 'English'}
 
 ── HIGHLIGHT STAT ──
-Find the single most dramatic number, contrast, or gap in the content.
-Return as: { "label": "short label", "from": "left side", "to": "right side", "magnitude": "the shocking number or %" }
-Example: { "label": "Price gap", "from": "👨‍🌾 Farmer: ¥2", "to": "☕ Consumer: ¥2000", "magnitude": "+7000%" }
+Find the single most dramatic number, contrast, or gap. Be specific and visual.
+Return as: { "label": "short label", "from": "left side with emoji", "to": "right side with emoji", "magnitude": "the shocking % or number" }
+Example: { "label": "価格格差", "from": "👨‍🌾 農家：約2ブル", "to": "☕ 消費者：約2000ブル", "magnitude": "+7000%" }
 Return null if no dramatic contrast exists.
 
 ── SIMPLE EXPLANATION (step-by-step) ──
 CRITICAL RULES:
-- Each step = EXACTLY ONE idea. Never put 2 ideas in one step.
-- Format: "Step N｜Short Label\nOne sentence. If needed, add 👉 sub-points on new lines starting with 👉"
-- For complex steps: use 👉 micro-headlines to break it down (👉 表向き: / 👉 現実: / 👉 結果:)
-- For math/science: show worked examples with numbered steps, explain WHY
-- Analogies: ${language === 'japanese' ? 'Use "たとえば：" followed by a Japanese real-life comparison. Never use English "Think of it like"' : 'Start with "Think of it like..." using a concrete everyday comparison'}
-- If a topic has 4+ ideas, split into more steps rather than cramming
+- Each step = EXACTLY ONE idea. Split relentlessly — more steps is better than cramming.
+- Format: "Step N｜Short Label\nOne sentence.\n👉 Section header (if needed)\n・sub-item\n・sub-item"
+- Use 👉 ONLY for section headers (👉 なぜ？/ 👉 現実 / 👉 解決). Max 2-3 per step.
+- Use ・ for bullet items under a 👉 header. NEVER 👉 for regular bullets.
+- For 3+ mechanisms in one step: preview first ("次の3つ：① ② ③") then use 👉/・ structure
+- Add ONE emotional/human impact line per explanation where it fits ("どれだけ働いても〇〇できない")
+- Analogies: ${language === 'japanese' ? 'Use "たとえば：" + a Japanese everyday comparison. NEVER use English "Think of it like"' : 'Use "Think of it like..." + a concrete everyday comparison'}
+- Math/science: show worked example, explain WHY each step is done
 
 ── THINKING QUESTIONS ──
-Write 2 questions that feel like real conversation, not exams.
-Good format: "もし〇〇がなかったら、誰が一番困ると思う？"
-Goal: make students go "huh, I never thought about that" — not just recall facts.
+2 conversational questions — not exam-style recall.
+Make them feel like: "huh, I never thought about that"
+Keep short: 1-2 lines max. Real-world framing.
 
-CORRECTIONS: Check for errors. List each as "Incorrect: X. Correct: Y because Z." Return [] if correct.
+CORRECTIONS: Check for errors. List as "Incorrect: X. Correct: Y because Z." Return [] if correct.
 
 ${illustrationInstruction}
 
 Respond in valid JSON with EXACTLY these keys:
 {
-  "summary": "Hook sentence\\n👉 key fact\\n👉 the contrast\\n👉 reason why\\n👉 conclusion",
+  "summary": "Hook (max 12 words)\\n👉 key point\\n・sub-item if needed\\n👉 contrast\\n👉 reason\\n👉 conclusion",
   "highlightStat": { "label": "...", "from": "...", "to": "...", "magnitude": "..." },
-  "simpleExplanation": "Step 1｜Label\\nOne idea.\\n👉 sub-point if needed\\n\\nStep 2｜Label\\n...",
-  "thinkingQuestions": ["Conversational question 1?", "Conversational question 2?"],
+  "simpleExplanation": "Step 1｜Label\\nOne idea.\\n👉 Section header\\n・bullet\\n・bullet\\n\\nStep 2｜Label\\n...",
+  "thinkingQuestions": ["Short conversational question?", "Real-world framing question?"],
   "corrections": [],
   "illustrationQuery": "search term or null",
   "keyTopics": ["topic1", "topic2", "topic3"],
@@ -206,11 +210,15 @@ Rules: 5+ flashcards, 4 quiz questions, exactly 4 options each, vary correct ans
     }
 
     send({ type: 'progress', value: 96 });
-    // Robust JSON extraction — find first { and last } to handle any extra text Haiku adds
-    const jsonStart = fullText.indexOf('{');
-    const jsonEnd   = fullText.lastIndexOf('}');
+    // Sanitize — remove replacement characters and control chars that break rendering
+    const sanitized = fullText
+      .replace(/\uFFFD/g, '')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    // Robust JSON extraction
+    const jsonStart = sanitized.indexOf('{');
+    const jsonEnd   = sanitized.lastIndexOf('}');
     if (jsonStart === -1 || jsonEnd === -1) throw new Error('No JSON object found in response');
-    const parsed = JSON.parse(fullText.slice(jsonStart, jsonEnd + 1));
+    const parsed = JSON.parse(sanitized.slice(jsonStart, jsonEnd + 1));
     send({ type: 'progress', value: 100 });
     send({ type: 'result', data: parsed });
 

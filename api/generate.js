@@ -57,8 +57,8 @@ export default async function handler(req, res) {
     if (furigana) {
       languageInstruction = `IMPORTANT: Write ALL text values in Japanese (日本語).
 This app is used by 留学生 so assume limited kanji knowledge.
-Add furigana to ALL kanji EXCEPT the most basic: 一二三四五六七八九十百千万日月火水木金土年人口手足目耳山川田大小中上下左右本今何円時国.
-Wrap every other kanji like this: 【漢字|かんじ】 — use 【 and 】 exactly, NOT curly braces.`;
+Add furigana to EVERY kanji without exception — including common ones like 日、月、年、人、国.
+Every single kanji MUST use markup: 【kanji|reading】 — use 【 and 】 exactly, NOT curly braces.`;
     } else {
       languageInstruction = 'IMPORTANT: All text values in the JSON MUST be written in Japanese (日本語). Write clearly for 留学生.';
     }
@@ -118,9 +118,13 @@ STRICT RULES:
 - FLOW: ① problem → ② why (simple) → ③ what changed → ④ solution → ⑤ reality
 - Format per step:
   "Step N｜Short Label
-  One sentence.
-  ・bullet (only if truly needed)
-  ・bullet"
+  Short sentence.
+  ・bullet (only if truly needed)"
+- For 2-part ideas, break across lines for breathing room:
+  "コーヒー豆の価格は、
+  ニューヨークで決まる
+  → 農家は決められない"
+  👉 More vertical = easier to read
 - Use 👉 ONLY for section headers (👉 ${language === 'japanese' ? 'なぜ？/ 👉 解決' : 'Why? / Solution'}). Max 1 per step. Only when it clearly helps.
 - ・ bullets under 👉 only. Max 2 per 👉.
 - ONE analogy for the WHOLE explanation (${language === 'japanese' ? 'たとえば：＋ simple Japanese comparison. Example on its own line. NEVER "Think of it like"' : '"Think of it like..." + one concrete everyday comparison. On its own line.'}).

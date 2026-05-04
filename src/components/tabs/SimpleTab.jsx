@@ -1,24 +1,6 @@
-import { useState, useEffect } from 'react';
 import FuriganaText from '../FuriganaText.jsx';
 import { sanitizeText } from '../../utils/sanitize.js';
 
-async function fetchWikiImage(query, isJapanese) {
-  if (!query) return null;
-  const lang = isJapanese ? 'ja' : 'en';
-  try {
-    const searchUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*&srlimit=1`;
-    const searchRes  = await fetch(searchUrl);
-    const searchData = await searchRes.json();
-    const title = searchData?.query?.search?.[0]?.title;
-    if (!title) return null;
-    const summaryUrl = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
-    const summaryData = await (await fetch(summaryUrl)).json();
-    if (summaryData?.thumbnail?.source) {
-      return { src: summaryData.thumbnail.source, caption: summaryData.title, url: summaryData.content_urls?.desktop?.page };
-    }
-    return null;
-  } catch { return null; }
-}
 
 // ── Summary text: first plain line = large bold hook, rest = smaller ──────────
 function SummaryText({ text, furigana }) {
@@ -121,24 +103,26 @@ function BulletText({ text, furigana, baseSize = 14 }) {
   );
 }
 
-// ── Step card — unified single accent color (no rainbow) ─────────────────────
-function StepCard({ label, body, furigana }) {
+// ── Step card — prominent variant for Step 1 (problem) and solution steps ────
+function StepCard({ label, body, furigana, prominent = false }) {
   return (
     <div style={{
-      background: 'var(--card)',
-      border: '1px solid var(--border)',
-      borderLeft: '3px solid var(--accent)',
+      background: prominent ? 'rgba(107,96,255,0.07)' : 'var(--card)',
+      border: prominent ? '1px solid rgba(107,96,255,0.25)' : '1px solid var(--border)',
+      borderLeft: prominent ? '4px solid var(--accent)' : '3px solid var(--accent)',
       borderRadius: '0 var(--radius-sm) var(--radius-sm) 0',
-      padding: '14px 16px',
+      padding: prominent ? '16px 18px' : '14px 16px',
     }}>
       <div style={{
         fontSize: 10, fontWeight: 800, letterSpacing: 1.2,
-        textTransform: 'uppercase', color: 'var(--accent)',
-        opacity: 0.65, marginBottom: 8,
+        textTransform: 'uppercase',
+        color: prominent ? 'var(--accent)' : 'var(--accent)',
+        opacity: prominent ? 1 : 0.65,
+        marginBottom: 8,
       }}>
         {label}
       </div>
-      <BulletText text={body} furigana={furigana} baseSize={14} />
+      <BulletText text={body} furigana={furigana} baseSize={prominent ? 15 : 14} />
     </div>
   );
 }
@@ -160,7 +144,10 @@ function ExplanationText({ text, furigana }) {
           const firstNewline = para.indexOf('\n');
           const label = firstNewline > -1 ? para.slice(0, firstNewline).trim() : para.trim();
           const body  = firstNewline > -1 ? para.slice(firstNewline + 1).trim() : '';
-          return <StepCard key={i} label={label} body={body} furigana={furigana} />;
+          // Step 1 (problem) and any "solution" step are most important
+          const isSolutionStep = /解決|solution|fix|answer/i.test(label);
+          const prominent = stepCounter === 1 || isSolutionStep;
+          return <StepCard key={i} label={label} body={body} furigana={furigana} prominent={prominent} />;
         }
 
         // Analogy lines
@@ -210,18 +197,7 @@ function ExplanationText({ text, furigana }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function SimpleTab({ summary, highlightStat, simpleExplanation, thinkingQuestions, corrections, illustrationQuery, furigana, isJapanese }) {
-  const [wikiImage,  setWikiImage]  = useState(null);
-  const [imgLoading, setImgLoading] = useState(false);
-
-  useEffect(() => {
-    if (!illustrationQuery) return;
-    setImgLoading(true);
-    setWikiImage(null);
-    fetchWikiImage(illustrationQuery, isJapanese).then(img => {
-      setWikiImage(img);
-      setImgLoading(false);
-    });
-  }, [illustrationQuery, isJapanese]);
+  // Image fetch removed — decorative images break reading flow
 
   const hasCorrections       = corrections?.length > 0;
   const hasThinkingQuestions = thinkingQuestions?.length > 0;
@@ -229,31 +205,7 @@ export default function SimpleTab({ summary, highlightStat, simpleExplanation, t
   return (
     <div>
 
-      {/* ── Wikipedia header banner (top, not mid-page) ────────────── */}
-      {!imgLoading && wikiImage && (
-        <a href={wikiImage.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block', marginBottom: 20 }}>
-          <div style={{
-            borderRadius: 'var(--radius)', overflow: 'hidden',
-            border: '1px solid var(--border)', position: 'relative',
-          }}>
-            <img
-              src={wikiImage.src}
-              alt={wikiImage.caption}
-              style={{ width: '100%', height: 130, objectFit: 'cover', objectPosition: 'center', display: 'block', background: '#fff' }}
-            />
-            <div style={{
-              position: 'absolute', bottom: 0, left: 0, right: 0,
-              background: 'linear-gradient(transparent, rgba(0,0,0,0.55))',
-              padding: '18px 12px 8px',
-              fontSize: 11, color: 'rgba(255,255,255,0.85)',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
-            }}>
-              <span>{wikiImage.caption}</span>
-              <span>{isJapanese ? 'Wikipedia ↗' : 'via Wikipedia ↗'}</span>
-            </div>
-          </div>
-        </a>
-      )}
+      {/* Wikipedia image intentionally removed — decorative images slow reading */}
 
       {/* ── Corrections banner ─────────────────────────────────────── */}
       {hasCorrections && (

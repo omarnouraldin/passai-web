@@ -5,12 +5,44 @@
  *  《keyword》   → critical term, highlighted red
  *  〔concept〕   → important concept, highlighted amber/orange
  *  ｛example｝   → example or analogy, highlighted teal/blue
+ *
+ *  Plain numbers (digits, +7000%, 2000ブル etc.) → highlighted amber
  */
+
+// Colorize standalone numbers in plain text segments
+function renderPlain(str, keyPrefix) {
+  // Match: optional +/- sign, digits, optional decimal/comma, optional % or ％
+  const numRx = /([+\-]?\d[\d,\.]*[%％]?)/g;
+  const parts = [];
+  let last = 0;
+  let m;
+  while ((m = numRx.exec(str)) !== null) {
+    if (m.index > last) {
+      parts.push(<span key={`${keyPrefix}_t${last}`}>{str.slice(last, m.index)}</span>);
+    }
+    parts.push(
+      <span key={`${keyPrefix}_n${m.index}`} style={{ color: 'var(--color-amber)', fontWeight: 700 }}>
+        {m[0]}
+      </span>
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < str.length) {
+    parts.push(<span key={`${keyPrefix}_t${last}`}>{str.slice(last)}</span>);
+  }
+  return parts.length === 1 && typeof parts[0].props?.children === 'string'
+    ? parts[0]
+    : <span key={keyPrefix}>{parts}</span>;
+}
+
 export default function FuriganaText({ text, furigana }) {
   if (!text) return null;
 
   const hasMarkup = text.includes('【') || text.includes('《') || text.includes('〔') || text.includes('｛');
-  if (!hasMarkup) return <span>{text}</span>;
+
+  if (!hasMarkup) {
+    return renderPlain(text, 'plain');
+  }
 
   const parts = [];
   const regex = /【([^|【】]+)\|([^|【】]+)】|《([^《》]+)》|〔([^〔〕]+)〕|｛([^｛｝]+)｝/g;
@@ -19,7 +51,7 @@ export default function FuriganaText({ text, furigana }) {
 
   while ((match = regex.exec(text)) !== null) {
     if (match.index > last) {
-      parts.push(<span key={`t${last}`}>{text.slice(last, match.index)}</span>);
+      parts.push(renderPlain(text.slice(last, match.index), `t${last}`));
     }
 
     if (match[1] !== undefined) {
@@ -60,7 +92,7 @@ export default function FuriganaText({ text, furigana }) {
   }
 
   if (last < text.length) {
-    parts.push(<span key={`t${last}`}>{text.slice(last)}</span>);
+    parts.push(renderPlain(text.slice(last), `t${last}`));
   }
 
   return <span>{parts}</span>;

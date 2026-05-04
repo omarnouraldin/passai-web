@@ -12,11 +12,12 @@ export function AuthProvider({ children }) {
   // Fetch profile (pro status + usage count)
   async function fetchProfile(userId) {
     if (!supabase || !userId) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('is_pro, generations_used')
       .eq('id', userId)
       .single();
+    console.log('[PassAI] fetchProfile result:', { data, error, userId });
     setIsPro(data?.is_pro ?? false);
     setGenerationsUsed(data?.generations_used ?? 0);
   }

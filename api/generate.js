@@ -84,15 +84,22 @@ ${languageInstruction}
 
 ${keywordInstruction}
 
-YOUR MISSION: Don't just summarize — TEACH. Structure your response carefully:
+YOUR MISSION: Help students understand fast — before a quiz. Not a lecture.
 
 ── SUMMARY (30-second version) ──
-TIGHT. Max 50 words total. Every word must earn its place.
-Format:
-- 1 hook sentence (max 12 words — the core truth, concrete not academic)
-- 3-5 lines starting with 👉 (max 8 words each — fragments are fine, no full sentences)
-- Under a 👉 line, use ・ for sub-items (never nest 👉 inside 👉)
-- Include the most dramatic number or contrast
+GOAL: A tired student reads this in 10 seconds and gets it.
+Rules:
+- Line 1: ONE simple sentence. Everyday words only. No academic vocabulary.
+  ${language === 'japanese' ? 'GOOD: "コーヒー農家は、ほとんど儲からない。"  BAD: "先物市場で搾取されている"' : 'GOOD: "Coffee farmers earn almost nothing."  BAD: "Farmers are exploited by futures markets"'}
+- Line 2 (if highlightStat exists): Just the visual gap. Example: "👨‍🌾 2ブル → ☕ 2000ブル"
+- Then 2 👉 sections with ・ bullets:
+  👉 ${language === 'japanese' ? 'なぜ？' : 'Why?'}
+  ・reason (max 7 words)
+  ・reason (max 7 words)
+  👉 ${language === 'japanese' ? '解決：' : 'Solution:'}
+  ・one line
+- ONE sticky line that sticks in the brain. Example: ${language === 'japanese' ? '"一番働いている人が、一番お金をもらえていない"' : '"The hardest workers earn the least"'}
+- NO emojis before bullet points. ONLY 👉 and ・ as markers. No ❓⚠️🔸 etc.
 - Language: ${language === 'japanese' ? 'Japanese (日本語)' : 'English'}
 
 ── HIGHLIGHT STAT ──
@@ -106,20 +113,25 @@ PURPOSE: Help a student understand the core concept in 1–2 minutes before a qu
 STRICT RULES:
 - MAXIMUM 5–6 steps. Never more. Consolidate ruthlessly.
 - Each step = EXACTLY ONE idea. One sentence + optional bullets. Nothing extra.
-- Very short sentences. Fragments are fine.
-- REMOVE: country statistics, detailed history, WTO/policy deep-dives, anything not needed to understand the core.
-- FOCUS on: ① What is the problem? ② Why does it happen (simple)? ③ What is the basic solution?
-- Format: "Step N｜Short Label\nOne sentence.\n・sub-item (only if truly necessary)"
-- Use 👉 ONLY for section headers (👉 なぜ？/ 👉 解決). Max 1 per step. Only when it genuinely helps.
-- Use ・ for bullets under 👉 headers only. Max 2 bullets per 👉.
-- ONE analogy max per full explanation (${language === 'japanese' ? '"たとえば：" + Japanese everyday comparison. NEVER "Think of it like"' : '"Think of it like..." + one concrete everyday comparison'}).
-- ONE emotional/human impact line for the whole explanation (not every step).
-- Goal: student feels "I get it" — NOT "I learned everything".
+- Use SIMPLE everyday words. ${language === 'japanese' ? 'Avoid: 搾取、廃止、圧力、体制. Use: もらえない、なくなった、強くなった' : 'Avoid jargon. Use plain words.'}
+- REMOVE: country statistics, detailed history, policy deep-dives, anything not needed to understand the core.
+- FLOW: ① problem → ② why (simple) → ③ what changed → ④ solution → ⑤ reality
+- Format per step:
+  "Step N｜Short Label
+  One sentence.
+  ・bullet (only if truly needed)
+  ・bullet"
+- Use 👉 ONLY for section headers (👉 ${language === 'japanese' ? 'なぜ？/ 👉 解決' : 'Why? / Solution'}). Max 1 per step. Only when it clearly helps.
+- ・ bullets under 👉 only. Max 2 per 👉.
+- ONE analogy for the WHOLE explanation (${language === 'japanese' ? 'たとえば：＋ simple Japanese comparison. Example on its own line. NEVER "Think of it like"' : '"Think of it like..." + one concrete everyday comparison. On its own line.'}).
+- ONE emotional line for the WHOLE explanation — not every step.
+- NO emojis as decorators. NO ❓⚠️🔸 before text. Only 👉 and ・.
+- Goal: student feels "I get it now" — NOT "I learned everything".
 
 ── THINKING QUESTIONS ──
-2 conversational questions — not exam-style recall.
-Make them feel like: "huh, I never thought about that"
-Keep short: 1-2 lines max. Real-world framing.
+2 casual questions that spark natural curiosity — NOT exam-style.
+${language === 'japanese' ? 'Style: "〇〇って、誰が一番〜だと思う？" — feels like a friend asking, not a teacher' : 'Style: "Who do you think actually profits here?" — feels like a friend asking, not a teacher'}
+Short: max 1–2 lines. No setup needed.
 
 CORRECTIONS: Check for errors. List as "Incorrect: X. Correct: Y because Z." Return [] if correct.
 
@@ -127,7 +139,7 @@ ${illustrationInstruction}
 
 Respond in valid JSON with EXACTLY these keys:
 {
-  "summary": "Hook (max 12 words)\\n👉 key point\\n・sub-item if needed\\n👉 contrast\\n👉 reason\\n👉 conclusion",
+  "summary": "Simple one sentence hook.\\n👨‍🌾 X → ☕ Y\\n👉 なぜ？\\n・reason\\n・reason\\n👉 解決：\\n・solution\\n一番働く人が、一番もらえない。",
   "highlightStat": { "label": "...", "from": "...", "to": "...", "magnitude": "..." },
   "simpleExplanation": "Step 1｜Label\\nOne idea.\\n👉 Section header\\n・bullet\\n・bullet\\n\\nStep 2｜Label\\n...",
   "thinkingQuestions": ["Short conversational question?", "Real-world framing question?"],

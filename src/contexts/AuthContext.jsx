@@ -4,19 +4,27 @@ import { supabase, SUPABASE_ENABLED } from '../lib/supabase.js';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user,    setUser]    = useState(null);
-  const [isPro,   setIsPro]   = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [user,             setUser]             = useState(null);
+  const [isPro,            setIsPro]            = useState(false);
+  const [generationsUsed,  setGenerationsUsed]  = useState(0);
+  const [loading,          setLoading]          = useState(true);
 
-  // Fetch pro status from profiles table
+  // Fetch profile (pro status + usage count)
   async function fetchProfile(userId) {
     if (!supabase || !userId) return;
     const { data } = await supabase
       .from('profiles')
-      .select('is_pro')
+      .select('is_pro, generations_used')
       .eq('id', userId)
       .single();
     setIsPro(data?.is_pro ?? false);
+    setGenerationsUsed(data?.generations_used ?? 0);
+  }
+
+  // Call after a successful generation to keep count in sync
+  async function refreshProfile() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) fetchProfile(session.user.id);
   }
 
   useEffect(() => {
@@ -33,7 +41,7 @@ export function AuthProvider({ children }) {
       const u = session?.user ?? null;
       setUser(u);
       if (u) fetchProfile(u.id);
-      else setIsPro(false);
+      else { setIsPro(false); setGenerationsUsed(0); }
     });
 
     return () => subscription.unsubscribe();
@@ -71,9 +79,9 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, isPro, loading,
+      user, isPro, generationsUsed, loading,
       signUp, signIn, signInWithGoogle, signOut,
-      getAccessToken,
+      getAccessToken, refreshProfile,
       enabled: SUPABASE_ENABLED,
     }}>
       {children}

@@ -11,23 +11,47 @@ app.use(express.json({ limit: '20mb' }));
 
 const PORT = process.env.PORT || 3001;
 
-async function getIsPro(authHeader) {
+const FREE_LIMIT = 5;
+
+async function checkUsage(authHeader) {
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return false;
+  if (!token) return { isPro: false, userId: null, userClient: null, used: 0 };
   const supabaseUrl  = process.env.VITE_SUPABASE_URL;
   const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnon) return false;
+  if (!supabaseUrl || !supabaseAnon) return { isPro: false, userId: null, userClient: null, used: 0 };
   try {
     const supabase = createClient(supabaseUrl, supabaseAnon);
     const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) return false;
+    if (error || !user) return { isPro: false, userId: null, userClient: null, used: 0 };
     const userClient = createClient(supabaseUrl, supabaseAnon, {
       global: { headers: { Authorization: `Bearer ${token}` } },
     });
     const { data: profile } = await userClient
-      .from('profiles').select('is_pro').eq('id', user.id).single();
-    return profile?.is_pro ?? false;
-  } catch { return false; }
+      .from('profiles').select('is_pro, generations_used, generations_reset_at').eq('id', user.id).single();
+    const isPro = profile?.is_pro ?? false;
+    const now = new Date();
+    const resetAt = profile?.generations_reset_at ? new Date(profile.generations_reset_at) : null;
+    const msInMonth = 30 * 24 * 60 * 60 * 1000;
+    const needsReset = !resetAt || (now - resetAt) > msInMonth;
+    let used = profile?.generations_used ?? 0;
+    if (needsReset) {
+      await userClient.from('profiles').update({ generations_used: 0, generations_reset_at: now.toISOString() }).eq('id', user.id);
+      used = 0;
+    }
+    if (!isPro && used >= FREE_LIMIT) {
+      const resetDate = resetAt ? new Date(resetAt.getTime() + msInMonth) : null;
+      throw { status: 429, body: { error: 'limit_reached', used, limit: FREE_LIMIT, resetAt: resetDate?.toISOString() ?? null } };
+    }
+    return { isPro, userId: user.id, userClient, used };
+  } catch (e) {
+    if (e.status) throw e;
+    return { isPro: false, userId: null, userClient: null, used: 0 };
+  }
+}
+
+async function incrementUsage(userClient, userId, used) {
+  if (!userClient || !userId) return;
+  try { await userClient.from('profiles').update({ generations_used: used + 1 }).eq('id', userId); } catch {}
 }
 
 // ── /api/generate — streaming SSE response ────────────────────────────────────
@@ -44,8 +68,14 @@ app.post('/api/generate', async (req, res) => {
   const hasText  = noteText && noteText.trim().length > 0;
   if (!hasImage && !hasText) return res.status(400).json({ error: 'No content provided.' });
 
-  // Model selection based on pro status
-  const isPro = await getIsPro(req.headers.authorization);
+  // Check usage limits + model selection
+  let isPro = false, userId = null, userClient = null, used = 0;
+  try {
+    ({ isPro, userId, userClient, used } = await checkUsage(req.headers.authorization));
+  } catch (e) {
+    if (e.status === 429) return res.status(429).json(e.body);
+    throw e;
+  }
   const model = isPro ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
 
   let languageInstruction;
@@ -236,6 +266,7 @@ Rules: 5+ flashcards, 4 quiz questions, exactly 4 options each, vary correct ans
     const parsed = JSON.parse(sanitized.slice(jsonStart, jsonEnd + 1));
     send({ type: 'progress', value: 100 });
     send({ type: 'result', data: parsed });
+    await incrementUsage(userClient, userId, used);
 
   } catch (err) {
     console.error('Generate error:', err);

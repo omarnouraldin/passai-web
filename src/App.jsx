@@ -3,6 +3,7 @@ import HomeView from './components/HomeView.jsx';
 import ResultsView from './components/ResultsView.jsx';
 import HistoryView from './components/HistoryView.jsx';
 import LoadingView from './components/LoadingView.jsx';
+import UpgradeModal from './components/UpgradeModal.jsx';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { supabase, SUPABASE_ENABLED } from './lib/supabase.js';
@@ -17,7 +18,7 @@ function loadLocalHistory() {
 
 // ── Inner app (has access to auth context) ───────────────────────────────────
 function AppInner() {
-  const { user, getAccessToken } = useAuth();
+  const { user, getAccessToken, refreshProfile } = useAuth();
 
   const [view,          setView]        = useState('home');
   const [isLoading,     setIsLoading]   = useState(false);
@@ -31,6 +32,7 @@ function AppInner() {
   const [error,         setError]       = useState(null);
   const [toast,         setToast]       = useState(null);
   const [abortCtrl,     setAbortCtrl]   = useState(null);
+  const [upgradeData,   setUpgradeData] = useState(null); // { used, limit, resetAt }
 
   const isJapanese = language === 'japanese';
 
@@ -113,6 +115,10 @@ function AppInner() {
 
       if (!res.ok) {
         const errData = await res.json();
+        if (res.status === 429 && errData.error === 'limit_reached') {
+          setUpgradeData({ used: errData.used, limit: errData.limit, resetAt: errData.resetAt });
+          return; // don't throw — show upgrade modal instead
+        }
         throw new Error(errData.error ?? 'Unknown error');
       }
 
@@ -157,6 +163,7 @@ function AppInner() {
       setGenerated(data);
       setContentId(item.id);
       setView('results');
+      refreshProfile(); // keep generation count in sync
 
       // Sync to Supabase if logged in
       if (user && SUPABASE_ENABLED && supabase) {
@@ -258,6 +265,16 @@ function AppInner() {
           {isJapanese ? '履歴' : 'History'}
         </button>
       </nav>
+
+      {upgradeData && (
+        <UpgradeModal
+          used={upgradeData.used}
+          limit={upgradeData.limit}
+          resetAt={upgradeData.resetAt}
+          isJapanese={isJapanese}
+          onClose={() => setUpgradeData(null)}
+        />
+      )}
 
       {error && <div className="toast">{error}</div>}
       {toast && <div className={`toast ${toast.type === 'success' ? 'success' : ''}`}>{toast.msg}</div>}

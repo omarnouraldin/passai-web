@@ -102,15 +102,19 @@ Example: { "label": "価格格差", "from": "👨‍🌾 農家：約2ブル", "
 Return null if no dramatic contrast exists.
 
 ── SIMPLE EXPLANATION (step-by-step) ──
-CRITICAL RULES:
-- Each step = EXACTLY ONE idea. Aim for 4-6 steps, MAXIMUM 8. If content needs more, consolidate related ideas into one step — never exceed 8.
-- Format: "Step N｜Short Label\nOne sentence.\n👉 Section header (if needed)\n・sub-item\n・sub-item"
-- Use 👉 ONLY for section headers (👉 なぜ？/ 👉 現実 / 👉 解決). Max 2-3 per step.
-- Use ・ for bullet items under a 👉 header. NEVER 👉 for regular bullets.
-- For 3+ mechanisms in one step: preview first ("次の3つ：① ② ③") then use 👉/・ structure
-- Add ONE emotional/human impact line per explanation where it fits ("どれだけ働いても〇〇できない")
-- Analogies: ${language === 'japanese' ? 'Use "たとえば：" + a Japanese everyday comparison. NEVER use English "Think of it like"' : 'Use "Think of it like..." + a concrete everyday comparison'}
-- Math/science: show worked example, explain WHY each step is done
+PURPOSE: Help a student understand the core concept in 1–2 minutes before a quiz. NOT a full lecture.
+STRICT RULES:
+- MAXIMUM 5–6 steps. Never more. Consolidate ruthlessly.
+- Each step = EXACTLY ONE idea. One sentence + optional bullets. Nothing extra.
+- Very short sentences. Fragments are fine.
+- REMOVE: country statistics, detailed history, WTO/policy deep-dives, anything not needed to understand the core.
+- FOCUS on: ① What is the problem? ② Why does it happen (simple)? ③ What is the basic solution?
+- Format: "Step N｜Short Label\nOne sentence.\n・sub-item (only if truly necessary)"
+- Use 👉 ONLY for section headers (👉 なぜ？/ 👉 解決). Max 1 per step. Only when it genuinely helps.
+- Use ・ for bullets under 👉 headers only. Max 2 bullets per 👉.
+- ONE analogy max per full explanation (${language === 'japanese' ? '"たとえば：" + Japanese everyday comparison. NEVER "Think of it like"' : '"Think of it like..." + one concrete everyday comparison'}).
+- ONE emotional/human impact line for the whole explanation (not every step).
+- Goal: student feels "I get it" — NOT "I learned everything".
 
 ── THINKING QUESTIONS ──
 2 conversational questions — not exam-style recall.

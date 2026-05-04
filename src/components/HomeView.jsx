@@ -154,7 +154,8 @@ export default function HomeView({
   furigana, setFurigana,
   isJapanese,
 }) {
-  const { user, enabled } = useAuth();
+  const { user, isPro, generationsUsed, enabled } = useAuth();
+  const FREE_LIMIT = 5;
 
   const [noteText,     setNoteText]     = useState('');
   const [importedFile, setImportedFile] = useState(null); // { file, status, data }
@@ -288,6 +289,32 @@ export default function HomeView({
 
             {/* Spacer when file card is shown */}
             {importedFile && <div style={{ height: 16 }} />}
+
+            {/* Usage indicator — free users only */}
+            {user && !isPro && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: 8, marginBottom: 10,
+              }}>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {Array.from({ length: FREE_LIMIT }).map((_, i) => (
+                    <div key={i} style={{
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: i < generationsUsed ? 'var(--color-amber)' : 'var(--border)',
+                      transition: 'background 0.3s',
+                    }} />
+                  ))}
+                </div>
+                <span style={{
+                  fontSize: 12, color: generationsUsed >= FREE_LIMIT ? 'var(--color-red)' : 'var(--muted)',
+                  fontWeight: generationsUsed >= FREE_LIMIT - 1 ? 700 : 400,
+                }}>
+                  {isJapanese
+                    ? `今月 ${generationsUsed}/${FREE_LIMIT} 回使用`
+                    : `${generationsUsed}/${FREE_LIMIT} this month`}
+                </span>
+              </div>
+            )}
 
             <button
               className="btn btn-primary"

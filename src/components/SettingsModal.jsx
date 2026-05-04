@@ -7,7 +7,10 @@ export default function SettingsModal({
   isJapanese, onClose, onOpenAuth,
 }) {
   const { theme, toggleTheme } = useTheme();
-  const { user, signOut, enabled } = useAuth();
+  const { user, isPro, generationsUsed, signOut, enabled } = useAuth();
+  const FREE_LIMIT = 5;
+  const usagePct   = Math.min(100, (generationsUsed / FREE_LIMIT) * 100);
+  const usageColor = usagePct >= 100 ? 'var(--color-red)' : usagePct >= 60 ? 'var(--color-amber)' : 'var(--accent)';
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -83,6 +86,47 @@ export default function SettingsModal({
                   {isJapanese ? 'ログイン中: ' : 'Signed in as '}
                   <span style={{ color: 'var(--text)', fontWeight: 600 }}>{user.email}</span>
                 </div>
+
+                {/* Usage bar — shown for free users */}
+                {!isPro && (
+                  <div style={{ width: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                        {isJapanese ? '今月の使用回数' : 'Monthly usage'}
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: usageColor }}>
+                        {generationsUsed} / {FREE_LIMIT}
+                      </span>
+                    </div>
+                    <div style={{ height: 5, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%', width: `${usagePct}%`,
+                        background: usageColor, borderRadius: 99,
+                        transition: 'width 0.4s ease',
+                      }} />
+                    </div>
+                    {usagePct >= 80 && (
+                      <div style={{ fontSize: 11, color: usageColor, marginTop: 5, fontWeight: 600 }}>
+                        {isJapanese
+                          ? usagePct >= 100 ? '今月の無料枠を使い切りました' : 'あと少しで無料枠がなくなります'
+                          : usagePct >= 100 ? 'Free limit reached this month' : 'Almost at your free limit'}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Pro badge */}
+                {isPro && (
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    background: 'rgba(107,96,255,0.12)', border: '1px solid rgba(107,96,255,0.3)',
+                    borderRadius: 50, padding: '4px 12px',
+                    fontSize: 12, fontWeight: 700, color: 'var(--accent)',
+                  }}>
+                    ✦ {isJapanese ? 'Proプラン' : 'Pro plan'}
+                  </div>
+                )}
+
                 <button
                   className="btn btn-ghost"
                   style={{ width: '100%', height: 36, fontSize: 13 }}

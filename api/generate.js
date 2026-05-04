@@ -21,11 +21,24 @@ async function checkUsage(authHeader) {
       global: { headers: { Authorization: `Bearer ${token}` } },
     });
 
-    const { data: profile } = await userClient
+    // Select full profile; fall back if generations_reset_at column doesn't exist yet
+    let profile;
+    const { data: fullData, error: fullErr } = await userClient
       .from('profiles')
       .select('is_pro, generations_used, generations_reset_at')
       .eq('id', user.id)
       .single();
+    if (fullErr) {
+      // Column might not exist yet — fall back to basic select
+      const { data: basicData } = await userClient
+        .from('profiles')
+        .select('is_pro, generations_used')
+        .eq('id', user.id)
+        .single();
+      profile = basicData;
+    } else {
+      profile = fullData;
+    }
 
     const isPro = profile?.is_pro ?? false;
 

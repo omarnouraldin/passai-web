@@ -26,8 +26,17 @@ async function checkUsage(authHeader) {
     const userClient = createClient(supabaseUrl, supabaseAnon, {
       global: { headers: { Authorization: `Bearer ${token}` } },
     });
-    const { data: profile } = await userClient
+    // Select full profile; fall back if generations_reset_at column doesn't exist yet
+    let profile;
+    const { data: fullData, error: fullErr } = await userClient
       .from('profiles').select('is_pro, generations_used, generations_reset_at').eq('id', user.id).single();
+    if (fullErr) {
+      const { data: basicData } = await userClient
+        .from('profiles').select('is_pro, generations_used').eq('id', user.id).single();
+      profile = basicData;
+    } else {
+      profile = fullData;
+    }
     const isPro = profile?.is_pro ?? false;
     const now = new Date();
     const resetAt = profile?.generations_reset_at ? new Date(profile.generations_reset_at) : null;

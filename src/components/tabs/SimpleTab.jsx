@@ -30,11 +30,11 @@ function SummaryText({ text, furigana }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       {lines.map((line, i) => {
-        const is👉 = line.startsWith('👉');
+        const isHeader = line.startsWith('👉');
         const isBullet = line.startsWith('・') || line.startsWith('•') || line.startsWith('- ');
 
         // First non-bullet line = hook sentence (big + bold)
-        if (!is👉 && !isBullet && !hookUsed) {
+        if (!isHeader && !isBullet && !hookUsed) {
           hookUsed = true;
           return (
             <div key={i} style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.55, color: 'var(--text)', marginBottom: 8 }}>
@@ -44,7 +44,7 @@ function SummaryText({ text, furigana }) {
         }
 
         // 👉 section header
-        if (is👉) {
+        if (isHeader) {
           const content = line.slice(1).trim();
           return (
             <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start', marginTop: 6 }}>

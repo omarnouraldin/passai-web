@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import FuriganaText from '../FuriganaText.jsx';
+import { sanitizeText } from '../../utils/sanitize.js';
 
 async function fetchWikiImage(query, isJapanese) {
   if (!query) return null;
@@ -22,7 +23,7 @@ async function fetchWikiImage(query, isJapanese) {
 // ── Summary text: first plain line = large bold hook, rest = smaller ──────────
 function SummaryText({ text, furigana }) {
   if (!text) return null;
-  const clean = text.replace(/�/g, '').trim();
+  const clean = sanitizeText(text);
   const lines = clean.split('\n').filter(l => l.trim());
   let hookUsed = false;
 
@@ -82,7 +83,7 @@ function SummaryText({ text, furigana }) {
 // ── Bullet text for step body (👉 headers + ・ bullets) ───────────────────────
 function BulletText({ text, furigana, baseSize = 14 }) {
   if (!text) return null;
-  const clean = text.replace(/�/g, '').trim();
+  const clean = sanitizeText(text);
   const lines = clean.split('\n').filter(l => l.trim());
 
   return (

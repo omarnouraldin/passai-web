@@ -229,7 +229,9 @@ Rules: 5+ flashcards, 4 quiz questions, exactly 4 options each, vary correct ans
     // Sanitize — remove replacement characters and control chars that break rendering
     const sanitized = fullText
       .replace(/\uFFFD/g, '')
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+      .replace(/[\uD800-\uDFFF]/g, '')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      .normalize('NFC');
     // Robust JSON extraction
     const jsonStart = sanitized.indexOf('{');
     const jsonEnd   = sanitized.lastIndexOf('}');

@@ -12,14 +12,24 @@ export function AuthProvider({ children }) {
   // Fetch profile (pro status + usage count)
   async function fetchProfile(userId) {
     if (!supabase || !userId) return;
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('profiles')
       .select('is_pro, generations_used')
       .eq('id', userId)
       .single();
-    console.log('[PassAI] fetchProfile result:', { data, error, userId });
-    setIsPro(data?.is_pro ?? false);
-    setGenerationsUsed(data?.generations_used ?? 0);
+
+    // 406 = no row found — auto-create the profile
+    if (error || !data) {
+      await supabase.from('profiles').upsert({
+        id: userId,
+        is_pro: false,
+        generations_used: 0,
+      });
+      data = { is_pro: false, generations_used: 0 };
+    }
+
+    setIsPro(data.is_pro ?? false);
+    setGenerationsUsed(data.generations_used ?? 0);
   }
 
   // Call after a successful generation to keep count in sync

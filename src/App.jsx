@@ -3,7 +3,9 @@ import HomeView from './components/HomeView.jsx';
 import ResultsView from './components/ResultsView.jsx';
 import HistoryView from './components/HistoryView.jsx';
 import LoadingView from './components/LoadingView.jsx';
+import AuthModal from './components/AuthModal.jsx';
 import UpgradeModal from './components/UpgradeModal.jsx';
+import LandingPage from './components/LandingPage.jsx';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { supabase, SUPABASE_ENABLED } from './lib/supabase.js';
@@ -33,6 +35,7 @@ function AppInner() {
   const [toast,         setToast]       = useState(null);
   const [abortCtrl,     setAbortCtrl]   = useState(null);
   const [upgradeData,   setUpgradeData] = useState(null); // { used, limit, resetAt }
+  const [showAuth,      setShowAuth]    = useState(false);
 
   const isJapanese = language === 'japanese';
 
@@ -206,11 +209,21 @@ function AppInner() {
     setToast({ msg, type });
   }
 
+  function openAuth() {
+    setShowAuth(true);
+  }
+
   return (
     <div className="app">
       {isLoading && <LoadingView isJapanese={isJapanese} progress={progress} onCancel={cancelGeneration} />}
 
-      {view === 'home' && (
+      {!user ? (
+        <LandingPage
+          onTryFree={openAuth}
+          onOpenAuth={openAuth}
+          isJapanese={isJapanese}
+        />
+      ) : view === 'home' ? (
         <HomeView
           onGenerate={generate}
           charLimit={CHAR_LIMIT}
@@ -220,9 +233,7 @@ function AppInner() {
           setFurigana={setFurigana}
           isJapanese={isJapanese}
         />
-      )}
-
-      {view === 'results' && generated && (
+      ) : view === 'results' && generated ? (
         <ResultsView
           content={generated}
           contentId={contentId}
@@ -232,9 +243,7 @@ function AppInner() {
           onBack={() => setView('home')}
           onToast={showToast}
         />
-      )}
-
-      {view === 'history' && (
+      ) : (
         <HistoryView
           history={history}
           onOpen={openHistoryItem}
@@ -244,27 +253,28 @@ function AppInner() {
         />
       )}
 
-      {/* Bottom nav */}
-      <nav className="bottom-nav">
-        <button
-          className={`nav-tab ${view !== 'history' ? 'active' : ''}`}
-          onClick={() => setView('home')}
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-          </svg>
-          {isJapanese ? 'ホーム' : 'Home'}
-        </button>
-        <button
-          className={`nav-tab ${view === 'history' ? 'active' : ''}`}
-          onClick={() => setView('history')}
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
-          </svg>
-          {isJapanese ? '履歴' : 'History'}
-        </button>
-      </nav>
+      {user && (
+        <nav className="bottom-nav">
+          <button
+            className={`nav-tab ${view !== 'history' ? 'active' : ''}`}
+            onClick={() => setView('home')}
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg>
+            {isJapanese ? 'ホーム' : 'Home'}
+          </button>
+          <button
+            className={`nav-tab ${view === 'history' ? 'active' : ''}`}
+            onClick={() => setView('history')}
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+            </svg>
+            {isJapanese ? '履歴' : 'History'}
+          </button>
+        </nav>
+      )}
 
       {upgradeData && (
         <UpgradeModal
@@ -278,6 +288,7 @@ function AppInner() {
 
       {error && <div className="toast">{error}</div>}
       {toast && <div className={`toast ${toast.type === 'success' ? 'success' : ''}`}>{toast.msg}</div>}
+      {showAuth && <AuthModal isJapanese={isJapanese} onClose={() => setShowAuth(false)} />}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+import Stripe from 'stripe';
 
 dotenv.config();
 
@@ -29,7 +30,19 @@ function getSupabaseEnv() {
     supabaseUrl: process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '',
     supabaseAnon: process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? '',
     supabaseService: process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SERVICE_ROLE_KEY ?? '',
+    stripeSecret: process.env.STRIPE_SECRET_KEY ?? '',
+    stripePriceId: process.env.STRIPE_PRICE_ID_PRO_MONTHLY ?? '',
+    appBaseUrl: process.env.APP_BASE_URL ?? '',
   };
+}
+
+async function getAuthedUser(token) {
+  const { supabaseUrl, supabaseAnon } = getSupabaseEnv();
+  if (!token || !supabaseUrl || !supabaseAnon) return null;
+  const supabase = createClient(supabaseUrl, supabaseAnon);
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return null;
+  return user;
 }
 
 async function checkUsage(authHeader) {
@@ -168,6 +181,35 @@ app.post('/api/admin', async (req, res) => {
   }
 
   return res.status(400).json({ error: 'Unknown admin action' });
+});
+
+app.post('/api/stripe-checkout', async (req, res) => {
+  const token = req.headers.authorization?.startsWith('Bearer ')
+    ? req.headers.authorization.slice(7)
+    : null;
+  const user = await getAuthedUser(token);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { stripeSecret, stripePriceId, appBaseUrl } = getSupabaseEnv();
+  if (!stripeSecret) return res.status(500).json({ error: 'Missing STRIPE_SECRET_KEY' });
+  if (!stripePriceId) return res.status(500).json({ error: 'Missing STRIPE_PRICE_ID_PRO_MONTHLY' });
+  if (!appBaseUrl) return res.status(500).json({ error: 'Missing APP_BASE_URL' });
+
+  const stripe = new Stripe(stripeSecret);
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    line_items: [{ price: stripePriceId, quantity: 1 }],
+    success_url: `${appBaseUrl}/?checkout=success`,
+    cancel_url: `${appBaseUrl}/?checkout=cancel`,
+    customer_email: user.email ?? undefined,
+    client_reference_id: user.id,
+    metadata: { supabase_user_id: user.id },
+    subscription_data: {
+      metadata: { supabase_user_id: user.id },
+    },
+  });
+
+  return res.json({ url: session.url });
 });
 
 // ── /api/generate — streaming SSE response ────────────────────────────────────

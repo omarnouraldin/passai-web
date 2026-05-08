@@ -61,7 +61,7 @@ function buildShareText(content, isJapanese) {
   return lines.join('\n');
 }
 
-export default function ResultsView({ content, contentId, originalInput, furigana, isJapanese, onBack, onToast }) {
+export default function ResultsView({ content, contentId, originalInput, furigana, isJapanese, onBack, onToast, onUpgrade }) {
   // 5 tabs: Simple | Overview | Flashcards | Quiz | Exam(PRO)
   const tabDefs = isJapanese
     ? ['解説', '概要', 'フラッシュカード', 'クイズ', '試験']
@@ -178,6 +178,7 @@ export default function ResultsView({ content, contentId, originalInput, furigan
           furigana={furigana}
           isJapanese={isJapanese}
           contentId={contentId}
+          onUpgrade={onUpgrade}
         />
       )}
     </div>

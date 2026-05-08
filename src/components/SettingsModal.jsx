@@ -7,6 +7,7 @@ export default function SettingsModal({
   isJapanese, onClose, onOpenAuth,
   adminModel, setAdminModel,
   onToggleSelfPro,
+  onUpgrade,
 }) {
   const { theme, toggleTheme } = useTheme();
   const { user, isPro, isAdmin, generationsUsed, signOut, enabled } = useAuth();
@@ -115,6 +116,16 @@ export default function SettingsModal({
                       </div>
                     )}
                   </div>
+                )}
+
+                {!isPro && (
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: '100%', height: 38, fontSize: 13 }}
+                    onClick={onUpgrade}
+                  >
+                    {isJapanese ? 'Pro にアップグレード' : 'Upgrade / Go Pro'}
+                  </button>
                 )}
 
                 {/* Pro badge */}

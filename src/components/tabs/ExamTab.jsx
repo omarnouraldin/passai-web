@@ -51,7 +51,7 @@ function ProGate({ isJapanese }) {
         </ul>
       </div>
       <button className="btn btn-primary" style={{ width: '100%', maxWidth: 280 }}
-        onClick={() => alert(isJapanese ? 'まもなく公開予定です！' : 'Coming soon!')}>
+        onClick={onUpgrade}>
         {isJapanese ? 'Pro にアップグレード' : 'Upgrade to Pro'}
       </button>
     </div>
@@ -59,7 +59,7 @@ function ProGate({ isJapanese }) {
 }
 
 // ── Main ExamTab ──────────────────────────────────────────────────────────────
-export default function ExamTab({ originalInput, furigana, isJapanese, contentId }) {
+export default function ExamTab({ originalInput, furigana, isJapanese, contentId, onUpgrade }) {
   const { isPro } = useAuth();
 
   const [examState,  setExamState]  = useState('idle');    // idle | generating | ready | evaluating | done

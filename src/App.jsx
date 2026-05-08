@@ -96,6 +96,28 @@ function AppInner() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(window.location.search);
+    const checkoutStatus = params.get('checkout');
+    if (!checkoutStatus) return;
+
+    refreshProfile();
+    if (checkoutStatus === 'success') {
+      showToast(landingIsJapanese ? 'Stripe checkout completed' : 'Stripe checkout completed', 'success');
+    } else if (checkoutStatus === 'cancel') {
+      showToast(landingIsJapanese ? 'Checkout cancelled' : 'Checkout cancelled', 'error');
+    }
+
+    params.delete('checkout');
+    const nextSearch = params.toString();
+    window.history.replaceState(
+      {},
+      '',
+      `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash || ''}`,
+    );
+  }, [user]);
+
   // ── Generate ───────────────────────────────────────────────────────────
   function cancelGeneration() {
     abortCtrl?.abort();
@@ -232,8 +254,43 @@ function AppInner() {
     setShowAuth(true);
   }
 
+  function openUpgrade() {
+    setPage('landing');
+    setShowAuth(true);
+  }
+
   function openLanding() {
     setPage('landing');
+  }
+
+  async function startCheckout() {
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
+
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        setShowAuth(true);
+        return;
+      }
+
+      const res = await fetch('/api/stripe-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error ?? 'Checkout failed');
+      if (!data?.url) throw new Error('Checkout URL missing');
+      window.location.assign(data.url);
+    } catch (err) {
+      showToast(err?.message ?? 'Checkout failed', 'error');
+    }
   }
 
   return (
@@ -273,17 +330,19 @@ function AppInner() {
           furigana={furigana}
           setFurigana={setFurigana}
           isJapanese={isJapanese}
+          onUpgrade={startCheckout}
         />
       ) : view === 'results' && generated ? (
-        <ResultsView
-          content={generated}
-          contentId={contentId}
-          originalInput={originalInput}
-          furigana={furigana}
-          isJapanese={isJapanese}
-          onBack={() => setView('home')}
-          onToast={showToast}
-        />
+          <ResultsView
+            content={generated}
+            contentId={contentId}
+            originalInput={originalInput}
+            furigana={furigana}
+            isJapanese={isJapanese}
+            onBack={() => setView('home')}
+            onToast={showToast}
+            onUpgrade={startCheckout}
+          />
       ) : (
         <HistoryView
           history={history}
@@ -324,6 +383,7 @@ function AppInner() {
           resetAt={upgradeData.resetAt}
           isJapanese={isJapanese}
           onClose={() => setUpgradeData(null)}
+          onUpgrade={startCheckout}
         />
       )}
 

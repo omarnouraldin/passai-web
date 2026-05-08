@@ -1,6 +1,13 @@
 const FREE_LIMIT = 5;
 
-export default function UpgradeModal({ used = 5, limit = FREE_LIMIT, resetAt, isJapanese, onClose }) {
+export default function UpgradeModal({
+  used = 5,
+  limit = FREE_LIMIT,
+  resetAt,
+  isJapanese,
+  onClose,
+  onUpgrade,
+}) {
   const resetDate = resetAt ? new Date(resetAt) : null;
   const resetStr  = resetDate
     ? resetDate.toLocaleDateString(isJapanese ? 'ja-JP' : 'en-US', { month: 'long', day: 'numeric' })
@@ -82,7 +89,7 @@ export default function UpgradeModal({ used = 5, limit = FREE_LIMIT, resetAt, is
         <button
           className="btn btn-primary"
           style={{ width: '100%', fontSize: 15, fontWeight: 800, marginBottom: 10 }}
-          onClick={() => { /* TODO: link to /pricing once Stripe is set up */ onClose(); }}
+          onClick={() => (onUpgrade ? onUpgrade() : onClose())}
         >
           {isJapanese ? '🚀 Proにアップグレード — ¥800/月' : '🚀 Upgrade to Pro — ¥800/month'}
         </button>

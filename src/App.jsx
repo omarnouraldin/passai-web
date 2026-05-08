@@ -105,7 +105,7 @@ function AppInner() {
   }
 
   // fileData = { text } | { imageBase64, mediaType } | null
-  async function generate(noteText, fileData) {
+  async function generate(noteText, fileData, adminModel = 'auto') {
     const controller = new AbortController();
     setAbortCtrl(controller);
     setIsLoading(true);
@@ -115,6 +115,7 @@ function AppInner() {
 
     try {
       const body = { language, furigana };
+      if (adminModel && adminModel !== 'auto') body.adminModel = adminModel;
       if (fileData?.imageBase64) {
         body.imageBase64 = fileData.imageBase64;
         body.mediaType   = fileData.mediaType;

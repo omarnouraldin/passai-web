@@ -5,9 +5,11 @@ export default function SettingsModal({
   language, setLanguage,
   furigana, setFurigana,
   isJapanese, onClose, onOpenAuth,
+  adminModel, setAdminModel,
+  onToggleSelfPro,
 }) {
   const { theme, toggleTheme } = useTheme();
-  const { user, isPro, generationsUsed, signOut, enabled } = useAuth();
+  const { user, isPro, isAdmin, generationsUsed, signOut, enabled } = useAuth();
   const FREE_LIMIT = 5;
   const usagePct   = Math.min(100, (generationsUsed / FREE_LIMIT) * 100);
   const usageColor = usagePct >= 100 ? 'var(--color-red)' : usagePct >= 60 ? 'var(--color-amber)' : 'var(--accent)';
@@ -134,6 +136,49 @@ export default function SettingsModal({
                 >
                   {isJapanese ? 'ログアウト' : 'Sign out'}
                 </button>
+
+                {isAdmin && (
+                  <div style={{
+                    width: '100%',
+                    marginTop: 10,
+                    padding: 12,
+                    borderRadius: 16,
+                    background: 'rgba(107,96,255,0.08)',
+                    border: '1px solid rgba(107,96,255,0.18)',
+                    display: 'grid',
+                    gap: 10,
+                  }}>
+                    <div className="setting-label">{isJapanese ? 'Admin tools' : 'Admin tools'}</div>
+                    <div className="setting-sub">
+                      {isJapanese ? '自分のPro状態とテスト用モデルのみ変更できます。' : 'You can only change your own Pro status and test model.'}
+                    </div>
+                    <button
+                      className="btn btn-ghost"
+                      style={{ width: '100%', height: 36, fontSize: 13 }}
+                      onClick={onToggleSelfPro}
+                    >
+                      {isPro ? (isJapanese ? 'Freeにする' : 'Set Free') : (isJapanese ? 'Proにする' : 'Set Pro')}
+                    </button>
+                    <select
+                      value={adminModel}
+                      onChange={e => setAdminModel(e.target.value)}
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        borderRadius: 12,
+                        border: '1px solid var(--border)',
+                        background: 'var(--card)',
+                        color: 'var(--text)',
+                        padding: '0 12px',
+                      }}
+                    >
+                      <option value="auto">auto</option>
+                      <option value="claude-haiku-4-5-20251001">claude-haiku-4-5-20251001</option>
+                      <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
+                      <option value="claude-opus-4-6">claude-opus-4-6</option>
+                    </select>
+                  </div>
+                )}
               </>
             ) : (
               <button

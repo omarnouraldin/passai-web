@@ -154,13 +154,14 @@ export default function HomeView({
   furigana, setFurigana,
   isJapanese,
 }) {
-  const { user, isPro, generationsUsed, enabled } = useAuth();
+  const { user, isPro, isAdmin, generationsUsed, enabled, getAccessToken, refreshProfile } = useAuth();
   const FREE_LIMIT = 5;
 
   const [noteText,     setNoteText]     = useState('');
   const [importedFile, setImportedFile] = useState(null); // { file, status, data }
   const [showSettings, setShowSettings] = useState(false);
   const [showAuth,     setShowAuth]     = useState(false);
+  const [adminModel,   setAdminModel]   = useState('auto');
 
   const fileRef   = useRef(null);
   const cameraRef = useRef(null);
@@ -189,10 +190,31 @@ export default function HomeView({
 
   function handleGenerate() {
     if (importedFile?.status === 'ok') {
-      onGenerate(null, importedFile.data);
+      onGenerate(null, importedFile.data, adminModel);
     } else {
-      onGenerate(noteText.slice(0, charLimit), null);
+      onGenerate(noteText.slice(0, charLimit), null, adminModel);
     }
+  }
+
+  async function handleToggleSelfPro() {
+    if (!isAdmin) return;
+    const token = await getAccessToken();
+    if (!token) return;
+
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ action: 'set_self_pro', isPro: !isPro }),
+    });
+    if (!res.ok) return;
+    const data = await res.json().catch(() => null);
+    await refreshProfile({
+      isAdmin: true,
+      isPro: typeof data?.isPro === 'boolean' ? data.isPro : !isPro,
+    });
   }
 
   return (
@@ -334,6 +356,9 @@ export default function HomeView({
           isJapanese={isJapanese}
           onClose={() => setShowSettings(false)}
           onOpenAuth={() => { setShowSettings(false); setShowAuth(true); }}
+          adminModel={adminModel}
+          setAdminModel={setAdminModel}
+          onToggleSelfPro={handleToggleSelfPro}
         />
       )}
       {showAuth && (

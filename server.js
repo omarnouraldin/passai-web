@@ -12,12 +12,30 @@ app.use(express.json({ limit: '20mb' }));
 const PORT = process.env.PORT || 3001;
 
 const FREE_LIMIT = 5;
+const ADMIN_EMAIL = 'omarnourelden3@gmail.com';
+const ADMIN_MODELS = new Set([
+  'auto',
+  'claude-haiku-4-5-20251001',
+  'claude-sonnet-4-6',
+  'claude-opus-4-6',
+]);
+
+function normalizeEmail(email) {
+  return String(email ?? '').trim().toLowerCase();
+}
+
+function getSupabaseEnv() {
+  return {
+    supabaseUrl: process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '',
+    supabaseAnon: process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? '',
+    supabaseService: process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SERVICE_ROLE_KEY ?? '',
+  };
+}
 
 async function checkUsage(authHeader) {
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
   if (!token) return { isPro: false, userId: null, userClient: null, used: 0 };
-  const supabaseUrl  = process.env.VITE_SUPABASE_URL;
-  const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY;
+  const { supabaseUrl, supabaseAnon } = getSupabaseEnv();
   if (!supabaseUrl || !supabaseAnon) return { isPro: false, userId: null, userClient: null, used: 0 };
   try {
     const supabase = createClient(supabaseUrl, supabaseAnon);
@@ -62,6 +80,95 @@ async function incrementUsage(userClient, userId, used) {
   if (!userClient || !userId) return;
   try { await userClient.from('profiles').update({ generations_used: used + 1 }).eq('id', userId); } catch {}
 }
+
+async function resolveAdminRequest(authHeader) {
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return { isAdmin: false };
+  const { supabaseUrl, supabaseAnon } = getSupabaseEnv();
+  if (!supabaseUrl || !supabaseAnon) return { isAdmin: false };
+  try {
+    const supabase = createClient(supabaseUrl, supabaseAnon);
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return { isAdmin: false };
+    return { isAdmin: user.email === ADMIN_EMAIL };
+  } catch {
+    return { isAdmin: false };
+  }
+}
+
+app.post('/api/admin', async (req, res) => {
+  const token = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null;
+  const action = req.body?.action ?? 'get_me';
+  const { supabaseUrl, supabaseAnon, supabaseService } = getSupabaseEnv();
+  if (!token || !supabaseUrl || !supabaseAnon) return res.status(401).json({ error: 'Unauthorized' });
+
+  const supabase = createClient(supabaseUrl, supabaseAnon, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return res.status(401).json({ error: 'Unauthorized' });
+  if (normalizeEmail(user.email) !== normalizeEmail(ADMIN_EMAIL)) return res.status(403).json({ error: 'Forbidden' });
+
+  const readClient = supabaseService
+    ? createClient(supabaseUrl, supabaseService, { auth: { persistSession: false } })
+    : supabase;
+
+  if (supabaseService) {
+    const { error: ensureError } = await readClient
+      .from('profiles')
+      .upsert({ id: user.id, is_admin: true }, { onConflict: 'id' });
+    if (ensureError) void ensureError;
+  }
+
+  const { data: profile } = await readClient
+    .from('profiles')
+    .select('id, is_admin, is_pro, generations_used')
+    .eq('id', user.id)
+    .single();
+
+  if (action === 'get_me') {
+    return res.json({
+      isAdmin: true,
+      isPro: profile?.is_pro ?? false,
+      generationsUsed: profile?.generations_used ?? 0,
+      adminModel: 'auto',
+    });
+  }
+
+  if (action === 'set_self_pro') {
+    const nextIsPro = !!req.body?.isPro;
+    if (!supabaseService) {
+      return res.status(500).json({ error: 'Missing SUPABASE_SERVICE_ROLE_KEY' });
+    }
+    const writeClient = createClient(supabaseUrl, supabaseService, { auth: { persistSession: false } });
+    const { error: updateError } = await writeClient.from('profiles').upsert({
+      id: user.id,
+      is_admin: true,
+      is_pro: nextIsPro,
+    }, { onConflict: 'id' });
+    if (updateError) {
+      return res.status(500).json({ error: 'Update failed' });
+    }
+
+    const { data: updatedProfile, error: readError } = await writeClient
+      .from('profiles')
+      .select('is_pro')
+      .eq('id', user.id)
+      .single();
+
+    if (readError) {
+      return res.status(500).json({ error: 'Readback failed' });
+    }
+
+    return res.json({
+      ok: true,
+      isAdmin: true,
+      isPro: updatedProfile?.is_pro ?? nextIsPro,
+    });
+  }
+
+  return res.status(400).json({ error: 'Unknown admin action' });
+});
 
 // ── /api/generate — streaming SSE response ────────────────────────────────────
 app.post('/api/generate', async (req, res) => {

@@ -1,6 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
 const FREE_LIMIT = 5; // generations per month for free users
+const ADMIN_EMAIL = 'omarnourelden3@gmail.com';
+const ADMIN_MODELS = new Set([
+  'auto',
+  'claude-haiku-4-5-20251001',
+  'claude-sonnet-4-6',
+  'claude-opus-4-6',
+]);
 
 // ── Check usage limits and return profile info ────────────────────────────────
 // Returns { isPro, userId, userClient } or throws { status, body } for limit errors
@@ -85,6 +92,22 @@ async function incrementUsage(userClient, userId, used) {
   } catch { /* non-critical, don't fail the request */ }
 }
 
+async function resolveAdminRequest(authHeader) {
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return { isAdmin: false };
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnon) return { isAdmin: false };
+  try {
+    const supabase = createClient(supabaseUrl, supabaseAnon);
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return { isAdmin: false };
+    return { isAdmin: user.email === ADMIN_EMAIL };
+  } catch {
+    return { isAdmin: false };
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -94,6 +117,7 @@ export default async function handler(req, res) {
     mediaType = 'image/jpeg',
     language = 'english',
     furigana = false,
+    adminModel = 'auto',
   } = req.body;
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -111,7 +135,9 @@ export default async function handler(req, res) {
     if (e.status === 429) return res.status(429).json(e.body);
     throw e;
   }
-  const model = isPro ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
+  const { isAdmin } = await resolveAdminRequest(req.headers.authorization);
+  const defaultModel = isPro ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
+  const model = isAdmin && ADMIN_MODELS.has(adminModel) ? adminModel : defaultModel;
 
   // ── Language instructions ─────────────────────────────────────────────────
   let languageInstruction;

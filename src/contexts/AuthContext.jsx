@@ -6,6 +6,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user,             setUser]             = useState(null);
   const [isPro,            setIsPro]            = useState(false);
+  const [isAdmin,          setIsAdmin]          = useState(false);
   const [generationsUsed,  setGenerationsUsed]  = useState(0);
   const [loading,          setLoading]          = useState(true);
 
@@ -14,7 +15,7 @@ export function AuthProvider({ children }) {
     if (!supabase || !userId) return;
     let { data, error } = await supabase
       .from('profiles')
-      .select('is_pro, generations_used')
+      .select('is_pro, generations_used, is_admin')
       .eq('id', userId)
       .single();
 
@@ -32,10 +33,41 @@ export function AuthProvider({ children }) {
     setGenerationsUsed(data.generations_used ?? 0);
   }
 
-  // Call after a successful generation to keep count in sync
-  async function refreshProfile() {
+  async function fetchAdminState(token) {
+    if (!token) return;
+    try {
+      const url = '/api/admin';
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: 'get_me' }),
+      });
+      const text = await res.text();
+      if (!res.ok) return;
+      const data = JSON.parse(text);
+      setIsAdmin(!!data?.isAdmin);
+      if (typeof data?.isPro === 'boolean') setIsPro(data.isPro);
+      if (typeof data?.generationsUsed === 'number') setGenerationsUsed(data.generationsUsed);
+    } catch (err) {
+      void err;
+    }
+  }
+
+  // Call after a successful generation or admin write to keep state in sync
+  async function refreshProfile(patch = null) {
+    if (patch) {
+      if (typeof patch.isPro === 'boolean') setIsPro(patch.isPro);
+      if (typeof patch.isAdmin === 'boolean') setIsAdmin(patch.isAdmin);
+      if (typeof patch.generationsUsed === 'number') setGenerationsUsed(patch.generationsUsed);
+    }
     const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) fetchProfile(session.user.id);
+    if (session?.user) {
+      await fetchProfile(session.user.id);
+      await fetchAdminState(session.access_token);
+    }
   }
 
   useEffect(() => {
@@ -44,19 +76,37 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) fetchProfile(u.id);
+      if (u) {
+        fetchProfile(u.id);
+        fetchAdminState(session?.access_token);
+      }
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) fetchProfile(u.id);
-      else { setIsPro(false); setGenerationsUsed(0); }
+      if (u) {
+        fetchProfile(u.id);
+        fetchAdminState(session?.access_token);
+      } else {
+        setIsPro(false);
+        setIsAdmin(false);
+        setGenerationsUsed(0);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !user) return;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.access_token) {
+        fetchAdminState(session.access_token);
+      }
+    });
+  }, [user]);
 
   async function signUp(email, password) {
     const { error } = await supabase.auth.signUp({ email, password });
@@ -90,7 +140,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, isPro, generationsUsed, loading,
+      user, isPro, isAdmin, generationsUsed, loading,
       signUp, signIn, signInWithGoogle, signOut,
       getAccessToken, refreshProfile,
       enabled: SUPABASE_ENABLED,

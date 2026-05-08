@@ -8,7 +8,6 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '20mb' }));
 
 const PORT = process.env.PORT || 3001;
 
@@ -34,6 +33,37 @@ function getSupabaseEnv() {
     stripePriceId: process.env.STRIPE_PRICE_ID_PRO_MONTHLY ?? '',
     appBaseUrl: process.env.APP_BASE_URL ?? '',
   };
+}
+
+function getWebhookEventType(event) {
+  return event?.type ?? 'unknown';
+}
+
+async function syncStripeSubscription({ supabaseServiceClient, userId, customerId, subscription }) {
+  if (!supabaseServiceClient || !userId || !subscription) return;
+  const status = subscription.status ?? 'unknown';
+  const active = status === 'active' || status === 'trialing';
+  const priceId = subscription.items?.data?.[0]?.price?.id ?? null;
+  const currentPeriodEnd = subscription.current_period_end
+    ? new Date(subscription.current_period_end * 1000).toISOString()
+    : null;
+
+  const { error } = await supabaseServiceClient.from('profiles').upsert({
+    id: userId,
+    is_pro: active,
+    stripe_customer_id: customerId ?? subscription.customer ?? null,
+    stripe_subscription_id: subscription.id ?? null,
+    stripe_price_id: priceId,
+    subscription_status: status,
+    current_period_end: currentPeriodEnd,
+  }, { onConflict: 'id' });
+
+  if (error) throw error;
+}
+
+async function fetchSubscriptionFromStripe(stripe, subscriptionId) {
+  if (!stripe || !subscriptionId) return null;
+  return stripe.subscriptions.retrieve(subscriptionId);
 }
 
 async function getAuthedUser(token) {
@@ -108,6 +138,63 @@ async function resolveAdminRequest(authHeader) {
     return { isAdmin: false };
   }
 }
+
+app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const { stripeSecret, supabaseService, supabaseUrl } = getSupabaseEnv();
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
+  if (!stripeSecret || !webhookSecret || !supabaseService || !supabaseUrl) {
+    return res.status(500).send('Webhook not configured');
+  }
+
+  const stripe = new Stripe(stripeSecret);
+  let event;
+  try {
+    const signature = req.headers['stripe-signature'];
+    event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
+  } catch (err) {
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  const supabaseServiceClient = createClient(supabaseUrl, supabaseService, {
+    auth: { persistSession: false },
+  });
+
+  try {
+    if (getWebhookEventType(event) === 'checkout.session.completed') {
+      const session = event.data.object;
+      const userId = session.metadata?.supabase_user_id ?? null;
+      const subscriptionId = session.subscription ?? null;
+      const customerId = session.customer ?? null;
+      const subscription = await fetchSubscriptionFromStripe(stripe, subscriptionId);
+      if (userId && subscription) {
+        await syncStripeSubscription({ supabaseServiceClient, userId, customerId, subscription });
+      }
+    }
+
+    if (
+      getWebhookEventType(event) === 'customer.subscription.created' ||
+      getWebhookEventType(event) === 'customer.subscription.updated' ||
+      getWebhookEventType(event) === 'customer.subscription.deleted'
+    ) {
+      const subscription = event.data.object;
+      const userId = subscription.metadata?.supabase_user_id ?? null;
+      if (userId) {
+        await syncStripeSubscription({
+          supabaseServiceClient,
+          userId,
+          customerId: subscription.customer ?? null,
+          subscription,
+        });
+      }
+    }
+  } catch (err) {
+    return res.status(500).send(`Webhook handler failed: ${err.message}`);
+  }
+
+  return res.json({ received: true });
+});
+
+app.use(express.json({ limit: '20mb' }));
 
 app.post('/api/admin', async (req, res) => {
   const token = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null;

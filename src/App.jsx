@@ -6,16 +6,27 @@ import LoadingView from './components/LoadingView.jsx';
 import AuthModal from './components/AuthModal.jsx';
 import UpgradeModal from './components/UpgradeModal.jsx';
 import LandingPage from './components/LandingPage.jsx';
+import PrivacyPage from './components/PrivacyPage.jsx';
+import TermsPage from './components/TermsPage.jsx';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { supabase, SUPABASE_ENABLED } from './lib/supabase.js';
 
 const CHAR_LIMIT  = 8000;
 const HISTORY_KEY = 'passai_history';
+const LANG_KEY = 'passai_landing_lang';
 
 function loadLocalHistory() {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) ?? []; }
   catch { return []; }
+}
+
+function detectInitialLocale() {
+  if (typeof window === 'undefined') return 'en';
+  const saved = localStorage.getItem(LANG_KEY);
+  if (saved === 'en' || saved === 'ja') return saved;
+  const browserLang = navigator.language?.toLowerCase() ?? '';
+  return browserLang.startsWith('ja') ? 'ja' : 'en';
 }
 
 // ── Inner app (has access to auth context) ───────────────────────────────────
@@ -36,13 +47,20 @@ function AppInner() {
   const [abortCtrl,     setAbortCtrl]   = useState(null);
   const [upgradeData,   setUpgradeData] = useState(null); // { used, limit, resetAt }
   const [showAuth,      setShowAuth]    = useState(false);
+  const [page,          setPage]        = useState('landing');
+  const [locale,        setLocale]      = useState(detectInitialLocale);
 
   const isJapanese = language === 'japanese';
+  const landingIsJapanese = locale === 'ja';
 
   // ── Persist history locally ────────────────────────────────────────────
   useEffect(() => {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }, [history]);
+
+  useEffect(() => {
+    localStorage.setItem(LANG_KEY, locale);
+  }, [locale]);
 
   // ── Load history from Supabase when user signs in ─────────────────────
   useEffect(() => {
@@ -213,16 +231,38 @@ function AppInner() {
     setShowAuth(true);
   }
 
+  function openLanding() {
+    setPage('landing');
+  }
+
   return (
     <div className="app">
       {isLoading && <LoadingView isJapanese={isJapanese} progress={progress} onCancel={cancelGeneration} />}
 
       {!user ? (
-        <LandingPage
-          onTryFree={openAuth}
-          onOpenAuth={openAuth}
-          isJapanese={isJapanese}
-        />
+        page === 'privacy' ? (
+          <PrivacyPage
+            locale={locale}
+            onBack={openLanding}
+            onOpenAuth={openAuth}
+          />
+        ) : page === 'terms' ? (
+          <TermsPage
+            locale={locale}
+            onBack={openLanding}
+            onOpenAuth={openAuth}
+          />
+        ) : (
+          <LandingPage
+            onTryFree={openAuth}
+            onOpenAuth={openAuth}
+            isJapanese={landingIsJapanese}
+            locale={locale}
+            onLocaleChange={setLocale}
+            onOpenPrivacy={() => setPage('privacy')}
+            onOpenTerms={() => setPage('terms')}
+          />
+        )
       ) : view === 'home' ? (
         <HomeView
           onGenerate={generate}

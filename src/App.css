@@ -88,6 +88,47 @@ html, body, #root {
   padding: 22px 20px 32px;
 }
 
+.landing-topbar,
+.legal-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.landing-brand {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: var(--text);
+}
+
+.landing-lang-toggle {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.lang-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lang-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
 .landing-page::before {
   content: '';
   position: fixed;
@@ -312,6 +353,59 @@ html, body, #root {
   color: var(--text);
 }
 
+.legal-page {
+  min-height: 100vh;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px 20px 32px;
+}
+
+.legal-back {
+  border: none;
+  background: none;
+  color: var(--text-2);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.legal-auth {
+  width: auto;
+  height: 38px;
+  padding: 0 14px;
+}
+
+.legal-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 24px 20px;
+  box-shadow: var(--shadow);
+}
+
+.legal-card h1 {
+  font-size: clamp(28px, 6vw, 40px);
+  letter-spacing: -1px;
+  margin-bottom: 12px;
+}
+
+.legal-intro {
+  color: var(--text-2);
+  line-height: 1.7;
+  margin-bottom: 18px;
+}
+
+.legal-copy {
+  display: grid;
+  gap: 12px;
+}
+
+.legal-copy p {
+  color: var(--text);
+  line-height: 1.7;
+}
+
 .page {
   flex: 1;
   max-width: 680px;
@@ -364,6 +458,10 @@ html, body, #root {
 
   .pricing-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .legal-card {
+    padding: 32px 28px;
   }
 }
 

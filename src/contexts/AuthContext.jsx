@@ -67,6 +67,11 @@ export function AuthProvider({ children }) {
     if (session?.user) {
       await fetchProfile(session.user.id);
       await fetchAdminState(session.access_token);
+      if (patch) {
+        if (typeof patch.isPro === 'boolean') setIsPro(patch.isPro);
+        if (typeof patch.isAdmin === 'boolean') setIsAdmin(patch.isAdmin);
+        if (typeof patch.generationsUsed === 'number') setGenerationsUsed(patch.generationsUsed);
+      }
     }
   }
 

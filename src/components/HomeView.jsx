@@ -162,7 +162,7 @@ export default function HomeView({
   const [importedFile, setImportedFile] = useState(null); // { file, status, data }
   const [showSettings, setShowSettings] = useState(false);
   const [showAuth,     setShowAuth]     = useState(false);
-  const [adminModel,   setAdminModel]   = useState('auto');
+  const [adminModel,   setAdminModel]   = useState('gpt-5.4-mini');
 
   const fileRef   = useRef(null);
   const cameraRef = useRef(null);

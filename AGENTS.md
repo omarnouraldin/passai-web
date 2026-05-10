@@ -5,7 +5,7 @@
 - Supabase handles auth, profiles, and history.
 - Vercel serverless routes live in `api/`.
 - `server.js` mirrors the `/api` backend for local development.
-- Anthropic Claude powers study generation over SSE.
+- OpenAI powers study generation, exam generation, and OCR over SSE or JSON responses.
 
 ## Local Dev
 - `npm install` to install dependencies.
@@ -30,8 +30,10 @@
 ## AI / Model Routing
 - Free users use the cheaper model.
 - Pro users use the stronger model.
-- Keep prompt/business logic consistent between `api/generate.js` and `server.js`.
-- If one changes, update the other in the same edit.
+- OpenAI powers study generation, exam generation, and OCR via `OPENAI_API_KEY`.
+- Keep model routing backend-authoritative and update allowlists carefully.
+- Keep prompt/business logic consistent between `api/generate.js`, `api/exam.js`, `api/ocr.js`, and `server.js`.
+- If one changes, update the matching local and Vercel route in the same edit.
 
 ## Testing Checklist
 - Run `npm run build`.

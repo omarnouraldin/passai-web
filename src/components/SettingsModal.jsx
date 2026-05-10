@@ -183,10 +183,9 @@ export default function SettingsModal({
                         padding: '0 12px',
                       }}
                     >
-                      <option value="auto">auto</option>
-                      <option value="claude-haiku-4-5-20251001">claude-haiku-4-5-20251001</option>
-                      <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
-                      <option value="claude-opus-4-6">claude-opus-4-6</option>
+                      <option value="gpt-5.4-mini">gpt-5.4-mini</option>
+                      <option value="gpt-5.4">gpt-5.4</option>
+                      <option value="gpt-5.5">gpt-5.5</option>
                     </select>
                   </div>
                 )}

@@ -20,5 +20,5 @@ After pushing, go to https://github.com/omarnouraldin/passai-web on your phone b
 Or deploy it publicly (so you can open it like a real website) using Vercel:
 - Go to https://vercel.com, sign in with GitHub
 - Click "Add New Project" → import passai-web
-- Set environment variable: ANTHROPIC_API_KEY = your key
+- Set environment variable: OPENAI_API_KEY = your key
 - Deploy — you'll get a public URL you can open on any device

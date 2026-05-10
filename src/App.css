@@ -85,7 +85,7 @@ html, body, #root {
 .landing-page {
   min-height: 100vh;
   width: 100%;
-  max-width: 980px;
+  max-width: 1080px;
   margin: 0 auto;
   padding: 22px 20px 32px;
 }
@@ -152,7 +152,7 @@ html, body, #root {
 }
 
 .landing-hero {
-  padding: 28px 22px 24px;
+  padding: 30px 24px 26px;
   margin-bottom: 16px;
   overflow: hidden;
 }
@@ -200,7 +200,7 @@ html, body, #root {
 }
 
 .landing-section {
-  padding: 22px;
+  padding: 24px;
   margin-bottom: 16px;
 }
 
@@ -319,12 +319,12 @@ html, body, #root {
 }
 
 .pricing-card.featured {
-  border-color: rgba(107,96,255,0.4);
-  background: linear-gradient(180deg, rgba(107,96,255,0.12), var(--card));
+  border-color: rgba(107,96,255,0.28);
+  background: linear-gradient(180deg, rgba(107,96,255,0.08), var(--card));
 }
 
 .pricing-value {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.8px;
   margin-bottom: 12px;
@@ -358,7 +358,7 @@ html, body, #root {
 .legal-page {
   min-height: 100vh;
   width: 100%;
-  max-width: 760px;
+  max-width: 860px;
   margin: 0 auto;
   padding: 20px 20px 32px;
 }
@@ -410,10 +410,10 @@ html, body, #root {
 
 .page {
   flex: 1;
-  max-width: 680px;
+  max-width: 760px;
   width: 100%;
   margin: 0 auto;
-  padding: 24px 20px 90px;
+  padding: 24px 22px 92px;
 }
 
 /* ─────────────────────────────────────────
@@ -465,6 +465,65 @@ html, body, #root {
   .legal-card {
     padding: 32px 28px;
   }
+
+  .page {
+    max-width: 900px;
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .header-row {
+    margin-bottom: 26px;
+  }
+}
+
+@media (min-width: 980px) {
+  .landing-page {
+    max-width: 1180px;
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .landing-section {
+    padding: 26px;
+  }
+
+  .page {
+    max-width: 980px;
+    padding-left: 30px;
+    padding-right: 30px;
+  }
+
+  .summary-text,
+  .flashcard-text,
+  .quiz-question-text,
+  .explanation-box {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .page {
+    max-width: 1080px;
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+
+  .landing-page {
+    max-width: 1240px;
+  }
+
+  .landing-hero {
+    padding: 34px 32px 28px;
+  }
+
+  .landing-section {
+    padding: 28px;
+  }
+
+  .card {
+    padding: 22px;
+  }
 }
 
 /* ─────────────────────────────────────────
@@ -474,17 +533,20 @@ html, body, #root {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
+  gap: 16px;
 }
 .header-left {
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
 }
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  flex-shrink: 0;
 }
 .icon-btn {
   width: 38px;
@@ -556,7 +618,7 @@ html, body, #root {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px;
+  padding: 20px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -663,7 +725,7 @@ html, body, #root {
   gap: 8px;
   overflow-x: auto;
   scrollbar-width: none;
-  padding-bottom: 2px;
+  padding-bottom: 4px;
   -webkit-overflow-scrolling: touch;
 }
 .pill-tabs::-webkit-scrollbar { display: none; }
@@ -690,7 +752,7 @@ html, body, #root {
 ───────────────────────────────────────── */
 .summary-text {
   font-size: 15px;
-  line-height: 1.8;
+  line-height: 1.82;
   color: var(--text);
 }
 
@@ -743,7 +805,7 @@ html, body, #root {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px 20px;
+  padding: 26px 22px;
   text-align: center;
   box-shadow: var(--shadow-sm);
 }
@@ -830,7 +892,7 @@ html, body, #root {
 .quiz-question-text {
   font-size: 16px;
   font-weight: 600;
-  line-height: 1.55;
+  line-height: 1.62;
   margin-bottom: 16px;
   color: var(--text);
 }
@@ -876,7 +938,7 @@ html, body, #root {
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 1.72;
   color: var(--text-2);
   margin-top: 4px;
   margin-bottom: 16px;
@@ -1173,6 +1235,54 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
 ───────────────────────────────────────── */
 ruby { ruby-align: center; }
 rt { font-size: 0.54em; color: var(--muted); }
+
+.furigana-text {
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
+.ruby-inline {
+  ruby-position: over;
+  ruby-align: center;
+  white-space: nowrap;
+  line-height: 1.2;
+  display: inline-ruby;
+}
+
+.ruby-base {
+  display: inline-block;
+}
+
+.ruby-rt {
+  font-size: 0.46em;
+  line-height: 1;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.card .ruby-inline,
+.quiz-option .ruby-inline,
+.flashcard-text .ruby-inline,
+.summary-text .ruby-inline,
+.quiz-question-text .ruby-inline,
+.explanation-box .ruby-inline {
+  white-space: normal;
+}
+
+.flashcard-text .ruby-inline,
+.quiz-option .ruby-inline,
+.summary-text .ruby-inline,
+.explanation-box .ruby-inline,
+.card .ruby-inline {
+  line-height: 1.28;
+}
+
+@media (max-width: 480px) {
+  .ruby-rt {
+    font-size: 0.42em;
+  }
+}
 
 /* ─────────────────────────────────────────
    Misc / Utility

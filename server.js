@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import generateHandler from './api/generate.js';
 import examHandler from './api/exam.js';
+import { rateLimit, rateLimitResponse, isPlainObject } from './lib/security.js';
 
 dotenv.config();
 
@@ -66,6 +67,9 @@ async function fetchSubscriptionFromStripe(stripe, subscriptionId) {
 }
 
 app.post('/api/admin', async (req, res) => {
+  const limited = rateLimit(req, 'admin');
+  if (!limited.allowed) return rateLimitResponse(res, 'admin', limited.retryAfterSeconds);
+  if (!isPlainObject(req.body)) return res.status(400).json({ error: 'Malformed JSON body.' });
   const token = req.headers.authorization?.startsWith('Bearer ')
     ? req.headers.authorization.slice(7)
     : null;
@@ -142,6 +146,9 @@ app.post('/api/admin', async (req, res) => {
 });
 
 app.post('/api/stripe-checkout', async (req, res) => {
+  const limited = rateLimit(req, 'stripe');
+  if (!limited.allowed) return rateLimitResponse(res, 'stripe', limited.retryAfterSeconds);
+  if (!isPlainObject(req.body)) return res.status(400).json({ error: 'Malformed JSON body.' });
   const token = req.headers.authorization?.startsWith('Bearer ')
     ? req.headers.authorization.slice(7)
     : null;
@@ -171,6 +178,8 @@ app.post('/api/stripe-checkout', async (req, res) => {
 });
 
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const limited = rateLimit(req, 'webhook');
+  if (!limited.allowed) return rateLimitResponse(res, 'webhook', limited.retryAfterSeconds);
   const { stripeSecret, supabaseService, supabaseUrl } = getSupabaseEnv();
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
   if (!stripeSecret || !webhookSecret || !supabaseService || !supabaseUrl) {
@@ -226,6 +235,13 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
 });
 
 app.use(express.json({ limit: '20mb' }));
+
+app.use((err, req, res, next) => {
+  if (err?.type === 'entity.parse.failed' || err instanceof SyntaxError) {
+    return res.status(400).json({ error: 'Malformed JSON body.' });
+  }
+  return next(err);
+});
 
 app.post('/api/generate', generateHandler);
 

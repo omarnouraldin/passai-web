@@ -1,12 +1,25 @@
 import OpenAI from 'openai';
+import { rateLimit, rateLimitResponse, isPlainObject, normalizePayload, clampString } from '../lib/security.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const limited = rateLimit(req, 'ocr');
+  if (!limited.allowed) return rateLimitResponse(res, 'ocr', limited.retryAfterSeconds);
+  if (!isPlainObject(req.body)) return res.status(400).json({ error: 'Malformed JSON body.' });
 
-  const { image, mediaType } = req.body;
+  const normalized = normalizePayload(req.body, {
+    image: 'longstring',
+    mediaType: 'shortstring',
+  });
+  const image = clampString(normalized.image, 12_000_000);
+  const mediaType = normalized.mediaType || 'image/jpeg';
   const apiKey = process.env.OPENAI_API_KEY;
+  const token = req.headers.authorization?.startsWith('Bearer ')
+    ? req.headers.authorization.slice(7)
+    : null;
 
   if (!apiKey) return res.status(500).json({ error: 'API key not configured.' });
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
   if (!image) return res.status(400).json({ error: 'Image data required.' });
 
   try {

@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimit, rateLimitResponse, isPlainObject } from '../lib/security.js';
 
 function getEnv() {
   return {
@@ -22,6 +23,9 @@ async function getAuthedUser(token) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const limited = rateLimit(req, 'stripe');
+  if (!limited.allowed) return rateLimitResponse(res, 'stripe', limited.retryAfterSeconds);
+  if (!isPlainObject(req.body)) return res.status(400).json({ error: 'Malformed JSON body.' });
 
   const token = req.headers.authorization?.startsWith('Bearer ')
     ? req.headers.authorization.slice(7)

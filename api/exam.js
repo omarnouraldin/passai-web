@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { rateLimit, rateLimitResponse, isPlainObject, normalizePayload, clampString, asStringArray } from '../lib/security.js';
 
 function getEnv() {
   return {
@@ -111,24 +112,42 @@ async function createJsonResponse({ apiKey, model, prompt, schema }) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const limited = rateLimit(req, 'exam');
+  if (!limited.allowed) return rateLimitResponse(res, 'exam', limited.retryAfterSeconds);
+  if (!isPlainObject(req.body)) return res.status(400).json({ error: 'Malformed JSON body.' });
 
   const { apiKey } = getEnv();
   if (!apiKey) return res.status(500).json({ error: 'API key not configured.' });
+  const authHeader = req.headers.authorization ?? '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-  const isPro = await getIsPro(req.headers.authorization);
+  const isPro = await getIsPro(authHeader);
   if (!isPro) return res.status(403).json({ error: 'Exam Mode is a Pro feature.' });
 
-  const {
-    mode,
-    noteText,
-    imageBase64,
-    mediaType = 'image/jpeg',
-    language = 'english',
-    shortAnswers,
-    questions,
-  } = req.body;
+  const normalized = normalizePayload(req.body, {
+    mode: 'shortstring',
+    noteText: 'longstring',
+    imageBase64: 'longstring',
+    mediaType: 'shortstring',
+    language: 'shortstring',
+  });
+  const mode = normalized.mode || '';
+  const noteText = clampString(normalized.noteText, 8000);
+  const imageBase64 = clampString(normalized.imageBase64, 12_000_000);
+  const mediaType = normalized.mediaType || 'image/jpeg';
+  const language = normalized.language || 'english';
+  const shortAnswers = Array.isArray(req.body.shortAnswers) ? req.body.shortAnswers.slice(0, 3).map(v => typeof v === 'string' ? v.slice(0, 1000) : '') : null;
+  const questions = Array.isArray(req.body.questions)
+    ? req.body.questions.slice(0, 3).map(q => isPlainObject(q) ? ({
+        question: clampString(q.question, 500),
+        modelAnswer: clampString(q.modelAnswer, 1000),
+        keyPoints: asStringArray(q.keyPoints, 8, 200),
+      }) : null)
+    : null;
 
   if (mode === 'evaluate') {
+    if (!questions?.every(Boolean)) return res.status(400).json({ error: 'Malformed evaluation data.' });
     if (!shortAnswers || !questions) return res.status(400).json({ error: 'Missing evaluation data.' });
     const prompt = `You are a fair and strict exam grader. Grade each student short answer.\n\nQuestions to grade:\n${questions.map((q, i) => `Q${i + 1}: ${q.question}\nModel answer: ${q.modelAnswer}\nKey points required: ${q.keyPoints.join('; ')}\nStudent answer: "${shortAnswers[i] || '(blank)'}"`).join('\n\n')}\n\nReturn ONLY valid JSON:\n{ "evaluations": [{ "score": 0, "maxScore": 3, "feedback": "One sentence of specific feedback." }] }`;
     try {

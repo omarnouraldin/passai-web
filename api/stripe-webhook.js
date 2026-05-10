@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimit, rateLimitResponse } from '../lib/security.js';
 
 export const config = {
   api: {
@@ -81,6 +82,8 @@ async function handleEvent(stripe, supabaseServiceClient, event) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const limited = rateLimit(req, 'webhook');
+  if (!limited.allowed) return rateLimitResponse(res, 'webhook', limited.retryAfterSeconds);
 
   const { supabaseUrl, supabaseService, stripeSecret, webhookSecret } = getEnv();
   if (!supabaseUrl || !supabaseService || !stripeSecret || !webhookSecret) {

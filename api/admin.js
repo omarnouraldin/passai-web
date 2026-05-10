@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { rateLimit, rateLimitResponse, isPlainObject, normalizePayload } from '../lib/security.js';
 
 const ADMIN_EMAIL = 'omarnourelden3@gmail.com';
 
@@ -53,11 +54,18 @@ async function getAdminUser(token) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const limited = rateLimit(req, 'admin');
+  if (!limited.allowed) return rateLimitResponse(res, 'admin', limited.retryAfterSeconds);
+  if (!isPlainObject(req.body)) return res.status(400).json({ error: 'Malformed JSON body.' });
 
   const token = req.headers.authorization?.startsWith('Bearer ')
     ? req.headers.authorization.slice(7)
     : null;
-  const action = req.body?.action ?? 'get_me';
+  const normalized = normalizePayload(req.body, {
+    action: 'shortstring',
+    isPro: 'boolean',
+  });
+  const action = normalized.action || 'get_me';
   const { user, profile, supabase } = await getAdminUser(token);
 
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
@@ -74,7 +82,7 @@ export default async function handler(req, res) {
   }
 
   if (action === 'set_self_pro') {
-    const nextIsPro = !!req.body?.isPro;
+    const nextIsPro = normalized.isPro;
     const { supabaseService } = getSupabaseEnv();
     if (!supabaseService) {
       return res.status(500).json({ error: 'Missing SUPABASE_SERVICE_ROLE_KEY' });

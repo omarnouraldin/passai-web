@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildStudyPrompt, generateStudyMaterial, resolveOpenAIModel, OPENAI_ADMIN_MODELS } from '../lib/openaiStudy.js';
+import { rateLimit, rateLimitResponse, isPlainObject, normalizePayload, clampString, asBoolean } from '../lib/security.js';
 
 const FREE_LIMIT = 5;
 const ADMIN_EMAIL = 'omarnourelden3@gmail.com';
@@ -100,18 +101,31 @@ async function resolveAdminRequest(authHeader) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const limited = rateLimit(req, 'generate');
+  if (!limited.allowed) return rateLimitResponse(res, 'generate', limited.retryAfterSeconds);
+  if (!isPlainObject(req.body)) return res.status(400).json({ error: 'Malformed JSON body.' });
 
-  const {
-    noteText,
-    imageBase64,
-    mediaType = 'image/jpeg',
-    language = 'english',
-    furigana = false,
-    adminModel = 'auto',
-  } = req.body;
+  const normalized = normalizePayload(req.body, {
+    noteText: 'longstring',
+    imageBase64: 'longstring',
+    mediaType: 'shortstring',
+    language: 'shortstring',
+    furigana: 'boolean',
+    adminModel: 'shortstring',
+  });
+
+  const noteText = clampString(normalized.noteText, 8000);
+  const imageBase64 = clampString(normalized.imageBase64, 12_000_000);
+  const mediaType = normalized.mediaType || 'image/jpeg';
+  const language = normalized.language || 'english';
+  const furigana = asBoolean(normalized.furigana, false);
+  const adminModel = normalized.adminModel || 'auto';
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured on server.' });
+  const authHeader = req.headers.authorization ?? '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
   const hasImage = !!imageBase64;
   const hasText = noteText && noteText.trim().length > 0;
@@ -119,13 +133,13 @@ export default async function handler(req, res) {
 
   let isPro = false, userId = null, userClient = null, used = 0;
   try {
-    ({ isPro, userId, userClient, used } = await checkUsage(req.headers.authorization));
+    ({ isPro, userId, userClient, used } = await checkUsage(authHeader));
   } catch (e) {
     if (e.status === 429) return res.status(429).json(e.body);
     throw e;
   }
 
-  const { isAdmin } = await resolveAdminRequest(req.headers.authorization);
+  const { isAdmin } = await resolveAdminRequest(authHeader);
   const model = resolveOpenAIModel({
     adminOverride: isAdmin ? adminModel : null,
     isPro,

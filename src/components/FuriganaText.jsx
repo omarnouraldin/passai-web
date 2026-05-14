@@ -10,17 +10,6 @@
  *  Plain numbers (digits, +7000%, 2000ブル etc.) → highlighted amber
  */
 
-const JAPANESE_BASE_RX = /[一-龯々仝〆ヶぁ-んァ-ンー]+/;
-
-function renderWithBreaks(parts, keyPrefix) {
-  const out = [];
-  parts.forEach((part, idx) => {
-    if (idx > 0) out.push(<br key={`${keyPrefix}_br${idx}`} />);
-    out.push(part);
-  });
-  return out;
-}
-
 // Colorize standalone numbers in plain text segments and preserve line breaks.
 function renderPlain(str, keyPrefix) {
   // Match: optional +/- sign, digits, optional decimal/comma, optional % or ％
@@ -57,7 +46,7 @@ function renderRubyBase(base, ruby, key, furigana) {
   if (!furigana) return <span key={key}>{base}</span>;
   return (
     <ruby key={key} className="ruby-inline">
-      <span className="ruby-base">{base}</span>
+      {base}
       <rt className="ruby-rt">{ruby}</rt>
     </ruby>
   );

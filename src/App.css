@@ -646,9 +646,22 @@ html, body, #root {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .import-btn:hover { background: var(--card-hover); color: var(--text); }
 .import-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.import-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
+
+.file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  left: -9999px;
+  top: 0;
+}
 
 /* ─────────────────────────────────────────
    Textarea
@@ -1238,27 +1251,43 @@ rt { font-size: 0.54em; color: var(--muted); }
 
 .furigana-text {
   white-space: pre-wrap;
-  word-break: keep-all;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.62;
 }
 
 .ruby-inline {
   ruby-position: over;
   ruby-align: center;
-  white-space: nowrap;
-  line-height: 1.2;
-  display: inline-ruby;
+  white-space: normal;
+  line-height: 1.06;
+  display: inline;
+  vertical-align: baseline;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .ruby-base {
-  display: inline-block;
+  display: inline;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .ruby-rt {
-  font-size: 0.46em;
-  line-height: 1;
-  color: var(--muted);
+  font-size: 0.45em;
+  line-height: 0.9;
+  color: rgba(94, 94, 114, 0.62);
   font-weight: 500;
-  white-space: nowrap;
+  white-space: normal;
+  letter-spacing: 0.02em;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-align: center;
+  vertical-align: top;
 }
 
 .card .ruby-inline,
@@ -1275,12 +1304,24 @@ rt { font-size: 0.54em; color: var(--muted); }
 .summary-text .ruby-inline,
 .explanation-box .ruby-inline,
 .card .ruby-inline {
-  line-height: 1.28;
+  line-height: 1.08;
 }
 
 @media (max-width: 480px) {
+  .ruby-inline {
+    line-height: 1.02;
+  }
   .ruby-rt {
     font-size: 0.42em;
+    line-height: 0.88;
+    color: rgba(94, 94, 114, 0.58);
+  }
+
+  .summary-text,
+  .flashcard-text,
+  .quiz-question-text,
+  .explanation-box {
+    line-height: 1.68;
   }
 }
 
@@ -1414,5 +1455,149 @@ rt { font-size: 0.54em; color: var(--muted); }
   }
   .flashcard-text {
     font-size: 14px;
+  }
+}
+
+/* ─────────────────────────────────────────
+   Overflow Guards
+───────────────────────────────────────── */
+.app,
+.page,
+.landing-page,
+.legal-page,
+.card,
+.landing-hero,
+.landing-section,
+.legal-card,
+.modal-sheet,
+.retry-banner,
+.quiz-score,
+.history-card,
+.share-row,
+.header-row,
+.header-left,
+.header-actions {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.page,
+.landing-page,
+.legal-page {
+  overflow-x: clip;
+}
+
+.page > *,
+.landing-page > *,
+.legal-page > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.summary-text,
+.flashcard-text,
+.quiz-question-text,
+.explanation-box,
+.landing-hero p,
+.section-heading p,
+.benefit-card p,
+.pricing-card li,
+.legal-intro,
+.legal-copy p,
+.history-snippet,
+.tagline,
+.empty-sub,
+.auth-error,
+.setting-sub {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pill-tabs {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pill-tab {
+  flex: 0 0 auto;
+  max-width: 100%;
+}
+
+.btn,
+.share-btn,
+.import-btn,
+.nav-tab {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.flashcard-scene,
+.flashcard-inner,
+.flashcard-face {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.flashcard-face,
+.quiz-option,
+.card,
+.landing-hero,
+.landing-section,
+.legal-card,
+.retry-banner,
+.quiz-score,
+.explanation-box {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.ruby-inline {
+  display: inline;
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.ruby-rt {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .card,
+  .landing-hero,
+  .landing-section,
+  .legal-card,
+  .retry-banner,
+  .quiz-score,
+  .explanation-box {
+    max-width: 100%;
+  }
+
+  .header-row {
+    gap: 12px;
+  }
+
+  .flashcard-scene {
+    min-height: 220px;
+  }
+
+  .flashcard-inner {
+    min-height: 220px;
   }
 }

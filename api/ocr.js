@@ -43,7 +43,10 @@ export default async function handler(req, res) {
       ],
     });
 
-    const text = response.output_text ?? '';
+    const text = String(response.output_text ?? '').trim();
+    if (!text) {
+      return res.status(422).json({ error: 'Could not extract enough text.' });
+    }
     res.json({ text });
   } catch (err) {
     console.error('OCR error:', err);

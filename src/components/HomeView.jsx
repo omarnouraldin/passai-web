@@ -5,6 +5,7 @@ import mammoth from 'mammoth';
 import SettingsModal from './SettingsModal.jsx';
 import AuthModal from './AuthModal.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { getBrandWordmark, getBrandTagline } from '../lib/branding.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -313,21 +314,14 @@ function FileCard({ file, status, error, warning, onRemove, isJapanese, kind }) 
 
 // ── Login gate ────────────────────────────────────────────────────────────────
 function LoginGate({ isJapanese, onOpenAuth }) {
+  const brand = getBrandWordmark(isJapanese);
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flex: 1,
-      padding: '40px 24px',
-      textAlign: 'center',
-    }}>
-      <div style={{ fontSize: 72, marginBottom: 20 }}>🎓</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
+    <div className="login-gate">
+      <img src="/mascot/mascot-reading.png" alt={brand.full} className="login-gate-mascot" />
+      <div className="login-gate-title">
         {isJapanese ? 'ようこそ PassAI へ' : 'Welcome to PassAI'}
       </div>
-      <div style={{ fontSize: 15, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 32, maxWidth: 280 }}>
+      <div className="login-gate-sub">
         {isJapanese
           ? 'アプリを使うにはサインインが必要です。アカウントを作成するか、既存のアカウントでログインしてください。'
           : 'Sign in to start turning your notes into study material. It only takes a moment.'}
@@ -352,6 +346,7 @@ export default function HomeView({
 }) {
   const { user, isPro, isAdmin, generationsUsed, enabled, getAccessToken, refreshProfile } = useAuth();
   const FREE_LIMIT = 5;
+  const brand = getBrandWordmark(isJapanese);
 
   const [noteText,     setNoteText]     = useState('');
   const [uploadedFiles, setUploadedFiles] = useState([]); // [{ id, file, status, text, error, warning, kind }]
@@ -538,15 +533,17 @@ export default function HomeView({
       <div className="page">
         {/* Header */}
         <div className="header-row">
-          <div className="header-left">
-            <img src="/mascot-icon.png" alt="PassAI" className="mascot-icon" />
+        <div className="header-left">
+          <div className="brand-orb">
+              <img src={brand.iconPath} alt={brand.full} className="mascot-icon" />
+            </div>
             <div>
-              <div className="logo">
-                <span className="logo-pass">{isJapanese ? 'パス' : 'Pass'}</span>
-                <span className="logo-ai">AI</span>
+              <div className="logo header-wordmark">
+                <span className="logo-pass">{brand.lead}</span>
+                <span className="logo-ai">{brand.suffix}</span>
               </div>
               <div className="tagline">
-                {isJapanese ? 'ノートをAIで学習素材に変換' : 'Turn notes into study material'}
+                {isJapanese ? 'ノートをAIで学習素材に変換' : getBrandTagline(false)}
               </div>
             </div>
           </div>
@@ -563,6 +560,19 @@ export default function HomeView({
           <LoginGate isJapanese={isJapanese} onOpenAuth={() => setShowAuth(true)} />
         ) : (
           <>
+        <div className="study-hero-card">
+          <div>
+            <div className="study-hero-kicker">{isJapanese ? '次のテスト準備を始めよう' : 'Ready for your next exam?'}</div>
+            <div className="study-hero-title">{isJapanese ? 'アップロードして開始' : 'Upload to get started'}</div>
+            <div className="study-hero-sub">
+              {isJapanese
+                ? 'PDF・写真・テキストから、要約とクイズをすばやく作成します。'
+                : 'Turn PDFs, images, and text notes into clean study material.'}
+            </div>
+          </div>
+          <img src="/mascot/mascot-reading.png" alt="" className="study-hero-mascot" />
+        </div>
+
         <div
           className={`upload-dropzone ${dragActive ? 'active' : ''}`}
           onDragEnter={handleDragEnter}
@@ -606,9 +616,31 @@ export default function HomeView({
             />
           </div>
 
-          <div className="upload-hint">
-            {uploadMessage()}
+          <div className="upload-hint upload-hint-stack">
+            <div className="upload-hint-title">
+              {isJapanese ? 'アップロード' : 'Upload'}
+            </div>
+            <div className="upload-hint-copy">
+              {uploadMessage()}
+            </div>
           </div>
+
+          {!!uploadedFiles.length && (
+            <div className="upload-list">
+              {uploadedFiles.map(item => (
+                <FileCard
+                  key={item.id}
+                  file={item.file}
+                  kind={item.kind}
+                  status={item.status}
+                  error={item.error}
+                  warning={item.warning}
+                  isJapanese={isJapanese}
+                  onRemove={() => removeUploadedFile(item.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Textarea stays available for manual notes */}
@@ -627,29 +659,9 @@ export default function HomeView({
           </span>
         </div>
 
-        {!!uploadedFiles.length && (
-          <div className="upload-list">
-            {uploadedFiles.map(item => (
-              <FileCard
-                key={item.id}
-                file={item.file}
-                kind={item.kind}
-                status={item.status}
-                error={item.error}
-                warning={item.warning}
-                isJapanese={isJapanese}
-                onRemove={() => removeUploadedFile(item.id)}
-              />
-            ))}
-          </div>
-        )}
-
             {/* Usage indicator — free users only */}
             {user && !isPro && (
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                gap: 8, marginBottom: 10,
-              }}>
+              <div className="usage-strip">
                 <div style={{ display: 'flex', gap: 4 }}>
                   {Array.from({ length: FREE_LIMIT }).map((_, i) => (
                     <div key={i} style={{

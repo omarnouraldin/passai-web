@@ -172,6 +172,7 @@ export default function QuizTab({ questions, thinkingQuestions, furigana, isJapa
       {/* Score banner */}
       {allDone && (
         <div className="quiz-score" style={{ marginBottom: 24 }}>
+          <img src="/mascot/mascot-success.png" alt="" className="quiz-score-mascot" />
           <div className="quiz-score-num">{score}/{total}</div>
           <div className="quiz-score-label">
             {isJapanese

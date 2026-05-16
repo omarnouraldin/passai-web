@@ -1,3 +1,5 @@
+import { getBrandWordmark, getBrandTagline } from '../lib/branding.js';
+
 const CONTENT = {
   en: {
     heroTitle: 'Turn your class notes into summaries, flashcards, and quizzes.',
@@ -43,10 +45,17 @@ const CONTENT = {
 
 export default function LandingPage({ onTryFree, onOpenAuth, isJapanese, locale, onLocaleChange, onOpenPrivacy, onOpenTerms }) {
   const copy = CONTENT[locale] ?? CONTENT.en;
+  const brand = getBrandWordmark(locale === 'ja');
   return (
     <div className="landing-page">
       <div className="landing-topbar">
-        <div className="landing-brand">PassAI</div>
+        <div className="landing-brand">
+          <div className="logo landing-brand-wordmark">
+            <span className="logo-pass">{brand.lead}</span>
+            <span className="logo-ai">{brand.suffix}</span>
+          </div>
+          <div className="landing-brand-sub">{getBrandTagline(locale === 'ja')}</div>
+        </div>
         <div className="landing-lang-toggle" role="group" aria-label="Language selector">
           <button
             className={`lang-btn ${locale === 'en' ? 'active' : ''}`}
@@ -63,9 +72,16 @@ export default function LandingPage({ onTryFree, onOpenAuth, isJapanese, locale,
         </div>
       </div>
       <section className="landing-hero">
-        <div className="landing-badge">PassAI</div>
-        <h1>{copy.heroTitle}</h1>
-        <p>{copy.heroBody}</p>
+        <div className="landing-hero-grid">
+          <div>
+            <div className="landing-hero-kicker">{brand.full}</div>
+            <h1>{copy.heroTitle}</h1>
+            <p>{copy.heroBody}</p>
+          </div>
+          <div className="landing-hero-art">
+            <img src="/mascot/mascot-reading.png" alt={brand.full} className="landing-mascot" />
+          </div>
+        </div>
         <div className="landing-cta-row">
           <button className="btn btn-primary landing-cta" onClick={onTryFree}>
             {copy.heroCta}
@@ -105,6 +121,14 @@ export default function LandingPage({ onTryFree, onOpenAuth, isJapanese, locale,
           </div>
           <div className="mockup-body">
             <div className="mockup-title">{copy.mockupTitle}</div>
+            <div className="mockup-shell">
+              <div className="mockup-shell-copy">
+                <div className="mockup-line long" />
+                <div className="mockup-line" />
+                <div className="mockup-line short" />
+              </div>
+              <img src="/mascot/mascot-loading.png" alt="" className="mockup-shell-mascot" />
+            </div>
             <div className="mockup-line long" />
             <div className="mockup-line" />
             <div className="mockup-line short" />

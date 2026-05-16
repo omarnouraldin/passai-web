@@ -1,4 +1,7 @@
+import { getBrandWordmark } from '../lib/branding.js';
+
 export default function HistoryView({ history, onOpen, onDelete, onClear, isJapanese }) {
+  const brand = getBrandWordmark(isJapanese);
   function formatDate(iso) {
     const d = new Date(iso);
     return d.toLocaleDateString(isJapanese ? 'ja-JP' : 'en-US', {
@@ -10,12 +13,14 @@ export default function HistoryView({ history, onOpen, onDelete, onClear, isJapa
     <div className="page">
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div>
-          <div className="logo" style={{ fontSize: 28 }}>
-            <span className="logo-pass">{isJapanese ? 'パス' : 'Pass'}</span>
-            <span className="logo-ai">AI</span>
+        <div className="history-heading">
+          <div className="logo history-wordmark">
+            <span className="logo-pass">{brand.lead}</span>
+            <span className="logo-ai">{brand.suffix}</span>
           </div>
+          <div>
           <div className="tagline">{isJapanese ? '生成履歴' : 'Generation history'}</div>
+          </div>
         </div>
         {history.length > 0 && (
           <button
@@ -30,7 +35,7 @@ export default function HistoryView({ history, onOpen, onDelete, onClear, isJapa
 
       {history.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">🕐</div>
+          <img src="/mascot/mascot-empty.png" alt="" className="empty-mascot" />
           <div className="empty-title">{isJapanese ? '履歴なし' : 'No history yet'}</div>
           <div className="empty-sub">
             {isJapanese

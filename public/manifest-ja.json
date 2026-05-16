@@ -1,7 +1,7 @@
 {
-  "name": "PassAI",
-  "short_name": "PassAI",
-  "description": "Turn your notes into study material with AI",
+  "name": "パスAI",
+  "short_name": "パスAI",
+  "description": "ノートをAIで学習素材に変換",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#08080e",

@@ -145,7 +145,7 @@ export default function FlashcardsTab({ cards, furigana, isJapanese, contentId }
 
       {allAnswered && skipCount === 0 && (
         <div className="retry-banner" style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 28, marginBottom: 8 }}>🎉</div>
+          <img src="/mascot/mascot-success.png" alt="" className="celebration-mascot" />
           <div style={{ fontWeight: 700, color: 'var(--success)', marginBottom: 12 }}>
             {isJapanese ? '全部覚えた！' : 'All cards mastered!'}
           </div>

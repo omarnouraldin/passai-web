@@ -3,8 +3,14 @@ const CACHE = 'passai-v1';
 
 const PRECACHE = [
   '/',
-  '/mascot-icon.png',
-  '/mascot-loading.png',
+  '/brand/app-icon-main.png',
+  '/brand/logo-en.png',
+  '/brand/logo-ja.png',
+  '/mascot/mascot-reading.png',
+  '/mascot/mascot-loading.png',
+  '/mascot/mascot-empty.png',
+  '/mascot/mascot-success.png',
+  '/mascot/mascot-sleepy.png',
 ];
 
 self.addEventListener('install', event => {

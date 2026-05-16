@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
+import heic2any from 'heic2any';
 import mammoth from 'mammoth';
 import SettingsModal from './SettingsModal.jsx';
 import AuthModal from './AuthModal.jsx';
@@ -8,7 +9,9 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
-const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif'];
+const HEIC_EXTS = ['heic', 'heif'];
+const HEIC_MIME_TYPES = ['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'];
 const MAX_UPLOAD_FILES = 8;
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MIN_VALID_TEXT = 40;
@@ -51,6 +54,41 @@ function isFileDrag(dataTransfer) {
   return Array.from(dataTransfer?.types ?? []).includes('Files');
 }
 
+function getExt(file) {
+  return file.name.split('.').pop().toLowerCase();
+}
+
+function isHeicFile(file) {
+  const ext = getExt(file);
+  return HEIC_EXTS.includes(ext) || HEIC_MIME_TYPES.includes((file.type || '').toLowerCase());
+}
+
+async function convertHeicToJpeg(file) {
+  try {
+    const converted = await heic2any({
+      blob: file,
+      toType: 'image/jpeg',
+      quality: 0.9,
+    });
+    const blob = Array.isArray(converted) ? converted[0] : converted;
+    if (!(blob instanceof Blob)) {
+      throw new Error('Invalid HEIC conversion result.');
+    }
+    return new File(
+      [blob],
+      file.name.replace(/\.(heic|heif)$/i, '.jpg'),
+      { type: 'image/jpeg', lastModified: file.lastModified },
+    );
+  } catch {
+    throw new Error('Could not process HEIC image.');
+  }
+}
+
+async function normalizeImageFile(file) {
+  if (!isHeicFile(file)) return file;
+  return convertHeicToJpeg(file);
+}
+
 async function loadImage(file) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -88,7 +126,8 @@ function blurScoreFromCanvas(canvas) {
 }
 
 async function compressImage(file) {
-  const img = await loadImage(file);
+  const normalizedFile = await normalizeImageFile(file);
+  const img = await loadImage(normalizedFile);
   if (!img) throw new Error('Could not load image.');
   const MAX = 1800;
   const ratio = Math.min(1, MAX / Math.max(img.width, img.height));
@@ -167,7 +206,7 @@ async function ocrPdfPages(pdf, token, maxPages = 8) {
 }
 
 async function processFile(file, token) {
-  const ext = file.name.split('.').pop().toLowerCase();
+  const ext = getExt(file);
   const isImage = IMAGE_EXTS.includes(ext) || file.type.startsWith('image/');
   const kind = getKindLabel(file);
 
@@ -544,7 +583,7 @@ export default function HomeView({
               id="passai-file-input"
               type="file"
               multiple
-              accept=".pdf,.doc,.docx,.txt,.md,.rtf,.jpg,.jpeg,.png,.webp,.gif"
+              accept=".pdf,.doc,.docx,.txt,.md,.rtf,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif,image/heic,image/heif"
               className="file-input-hidden"
               onChange={handleFile}
             />

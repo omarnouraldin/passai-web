@@ -43,7 +43,16 @@ const CONTENT = {
   },
 };
 
-export default function LandingPage({ onTryFree, onOpenAuth, isJapanese, locale, onLocaleChange, onOpenPrivacy, onOpenTerms }) {
+export default function LandingPage({
+  onTryFree,
+  onOpenAuth,
+  isJapanese,
+  locale,
+  onLocaleChange,
+  onOpenPrivacy,
+  onOpenTerms,
+  onOpenPricing,
+}) {
   const copy = CONTENT[locale] ?? CONTENT.en;
   const brand = getBrandWordmark(locale === 'ja');
   return (
@@ -88,6 +97,9 @@ export default function LandingPage({ onTryFree, onOpenAuth, isJapanese, locale,
           </button>
           <button className="btn btn-ghost landing-secondary" onClick={onOpenAuth}>
             {copy.signIn}
+          </button>
+          <button className="btn btn-ghost landing-secondary" onClick={() => onOpenPricing?.()}>
+            {locale === 'ja' ? '料金を見る' : 'View pricing'}
           </button>
         </div>
       </section>
@@ -171,6 +183,7 @@ export default function LandingPage({ onTryFree, onOpenAuth, isJapanese, locale,
       <footer className="landing-footer">
         <a href="#" onClick={e => { e.preventDefault(); onOpenPrivacy(); }}>{copy.footer.privacy}</a>
         <a href="#" onClick={e => { e.preventDefault(); onOpenTerms(); }}>{copy.footer.terms}</a>
+        <a href="#" onClick={e => { e.preventDefault(); onOpenPricing?.(); }}>{locale === 'ja' ? '料金' : 'Pricing'}</a>
         <a href="mailto:hello@passai.app">{copy.footer.contact}</a>
       </footer>
     </div>

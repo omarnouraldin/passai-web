@@ -8,6 +8,7 @@ export default function SettingsModal({
   adminModel, setAdminModel,
   onToggleSelfPro,
   onUpgrade,
+  onOpenPricing,
 }) {
   const { theme, toggleTheme } = useTheme();
   const { user, isPro, isAdmin, generationsUsed, signOut, enabled } = useAuth();
@@ -125,6 +126,16 @@ export default function SettingsModal({
                     onClick={onUpgrade}
                   >
                     {isJapanese ? 'Pro にアップグレード' : 'Upgrade / Go Pro'}
+                  </button>
+                )}
+
+                {!isPro && (
+                  <button
+                    className="btn btn-ghost"
+                    style={{ width: '100%', height: 36, fontSize: 13 }}
+                    onClick={() => (onOpenPricing ? onOpenPricing() : onClose())}
+                  >
+                    {isJapanese ? '料金を見る' : 'View pricing'}
                   </button>
                 )}
 

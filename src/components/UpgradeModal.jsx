@@ -7,11 +7,18 @@ export default function UpgradeModal({
   isJapanese,
   onClose,
   onUpgrade,
+  onOpenPricing,
 }) {
   const resetDate = resetAt ? new Date(resetAt) : null;
   const resetStr  = resetDate
     ? resetDate.toLocaleDateString(isJapanese ? 'ja-JP' : 'en-US', { month: 'long', day: 'numeric' })
     : null;
+  const freeItems = isJapanese
+    ? ['月5回の生成', '標準AI', '要約・フラッシュカード・クイズ', '基本OCR/アップロード']
+    : ['5 generations/month', 'Standard AI', 'Summary + Flashcards + Quiz', 'Basic OCR/upload'];
+  const proItems = isJapanese
+    ? ['無制限の生成', '高度AI推論', '試験モード', '難しい内容への強い対応', '今後の機能を優先利用']
+    : ['Unlimited generations', 'Advanced AI reasoning', 'Exam Mode', 'Better difficult-subject support', 'Priority future features'];
 
   return (
     <div style={{
@@ -23,24 +30,35 @@ export default function UpgradeModal({
       <div style={{
         background: 'var(--bg)', border: '1px solid var(--border)',
         borderRadius: 'var(--radius)', padding: '28px 24px',
-        maxWidth: 360, width: '100%', boxShadow: '0 24px 48px rgba(0,0,0,0.3)',
+        maxWidth: 420, width: '100%', boxShadow: '0 24px 48px rgba(0,0,0,0.3)',
+        maxHeight: 'min(92vh, 760px)', overflowY: 'auto',
       }} onClick={e => e.stopPropagation()}>
 
-        {/* Icon + Title */}
-        <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <div style={{ fontSize: 40, marginBottom: 10 }}>🚀</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>
-            {isJapanese ? '今月の無料枠を使い切りました' : 'Free limit reached'}
+        <div className="upgrade-modal-hero">
+          <div className="upgrade-modal-art">
+            <img
+              src="/mascot/mascot-sleepy.png"
+              alt=""
+              aria-hidden="true"
+            />
           </div>
-          <div style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6 }}>
-            {isJapanese
-              ? `無料プランは月${limit}回まで。Proにアップグレードして無制限に使いましょう。`
-              : `Free plan includes ${limit} generations/month. Upgrade to Pro for unlimited access.`}
+          <div className="upgrade-modal-copy">
+            <div className="upgrade-modal-badge">
+              {isJapanese ? 'PassAI Pro' : 'PassAI Pro'}
+            </div>
+            <div className="upgrade-modal-title">
+              {isJapanese ? '今月の無料生成回数を使い切りました' : "You've reached this month's free limit"}
+            </div>
+            <div className="upgrade-modal-subtitle">
+              {isJapanese
+                ? `無料プランは月${limit}回まで。Proなら、もっと多くの学習 सामग्रीを、より強いAIで作れます。`
+                : `Free includes ${limit} generations per month. Upgrade to Pro for unlimited study material, stronger AI explanations, and Exam Mode.`}
+            </div>
           </div>
         </div>
 
         {/* Usage bar */}
-        <div style={{ marginBottom: 20 }}>
+        <div className="upgrade-modal-usage">
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
               {isJapanese ? '今月の使用回数' : 'This month'}
@@ -64,42 +82,44 @@ export default function UpgradeModal({
         </div>
 
         {/* Free vs Pro comparison */}
-        <div style={{
-          background: 'var(--card)', border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-sm)', padding: '14px 16px', marginBottom: 20,
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
-        }}>
-          {[
-            [isJapanese ? '月5回' : '5/month',     isJapanese ? '無制限' : 'Unlimited'],
-            [isJapanese ? 'Haikuモデル' : 'Haiku model', isJapanese ? 'Sonnetモデル' : 'Sonnet model'],
-            [isJapanese ? '試験モード ✗' : 'Exam mode ✗', isJapanese ? '試験モード ✓' : 'Exam mode ✓'],
-          ].map(([free, pro], i) => (
-            <>
-              <div key={`f${i}`} style={{ fontSize: 13, color: 'var(--text-2)', padding: '3px 0' }}>
-                {free}
-              </div>
-              <div key={`p${i}`} style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', padding: '3px 0' }}>
-                ✦ {pro}
-              </div>
-            </>
-          ))}
+        <div className="upgrade-modal-compare">
+          <div className="upgrade-plan upgrade-plan-free">
+            <div className="upgrade-plan-label">{isJapanese ? 'FREE' : 'FREE'}</div>
+            <ul>
+              {freeItems.map(item => <li key={item}>{item}</li>)}
+            </ul>
+          </div>
+          <div className="upgrade-plan upgrade-plan-pro">
+            <div className="upgrade-plan-label">{isJapanese ? 'PRO' : 'PRO'}</div>
+            <ul>
+              {proItems.map(item => <li key={item}>{item}</li>)}
+            </ul>
+          </div>
         </div>
 
         {/* CTA */}
-        <button
-          className="btn btn-primary"
-          style={{ width: '100%', fontSize: 15, fontWeight: 800, marginBottom: 10 }}
-          onClick={() => (onUpgrade ? onUpgrade() : onClose())}
-        >
-          {isJapanese ? '🚀 Proにアップグレード — ¥800/月' : '🚀 Upgrade to Pro — ¥800/month'}
-        </button>
-        <button
-          className="btn btn-ghost"
-          style={{ width: '100%', fontSize: 14 }}
-          onClick={onClose}
-        >
-          {isJapanese ? '後で' : 'Maybe later'}
-        </button>
+        <div className="upgrade-modal-ctas">
+          <button
+            className="btn btn-primary upgrade-modal-primary"
+            onClick={() => (onUpgrade ? onUpgrade() : onClose())}
+          >
+            {isJapanese ? 'Proにアップグレード — ¥800/月' : 'Upgrade to Pro — ¥800/month'}
+          </button>
+          <button
+            className="btn btn-ghost"
+            style={{ width: '100%', fontSize: 14 }}
+            onClick={() => (onOpenPricing ? onOpenPricing() : onClose())}
+          >
+            {isJapanese ? '料金を見る' : 'View pricing'}
+          </button>
+          <button
+            className="btn btn-ghost"
+            style={{ width: '100%', fontSize: 14, marginTop: 2 }}
+            onClick={onClose}
+          >
+            {isJapanese ? '後で' : 'Maybe later'}
+          </button>
+        </div>
       </div>
     </div>
   );

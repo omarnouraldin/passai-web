@@ -1126,6 +1126,158 @@ html, body, #root {
   word-break: break-word;
 }
 
+.upgrade-modal-hero {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.upgrade-modal-art {
+  width: 104px;
+  height: 104px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 30% 22%, rgba(107,96,255,0.16), transparent 50%),
+    linear-gradient(180deg, rgba(107,96,255,0.08), rgba(255,255,255,0));
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.upgrade-modal-art img {
+  width: 92%;
+  height: 92%;
+  object-fit: contain;
+  display: block;
+}
+
+.upgrade-modal-copy {
+  min-width: 0;
+}
+
+.upgrade-modal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(107,96,255,0.18);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.upgrade-modal-title {
+  font-size: 20px;
+  line-height: 1.15;
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: -0.4px;
+  margin-bottom: 8px;
+}
+
+.upgrade-modal-subtitle {
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.upgrade-modal-usage {
+  margin-bottom: 18px;
+}
+
+.upgrade-modal-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.upgrade-plan {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px 14px 12px;
+  min-width: 0;
+}
+
+.upgrade-plan-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+.upgrade-plan-free .upgrade-plan-label {
+  color: var(--text-2);
+}
+
+.upgrade-plan ul {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.upgrade-plan li {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.upgrade-plan-free li {
+  color: var(--text-2);
+}
+
+.upgrade-plan-pro {
+  background: linear-gradient(180deg, rgba(107,96,255,0.12), rgba(107,96,255,0.05));
+  border-color: rgba(107,96,255,0.22);
+}
+
+.upgrade-modal-ctas {
+  display: grid;
+  gap: 10px;
+}
+
+.upgrade-modal-primary {
+  box-shadow: 0 10px 24px rgba(107,96,255,0.26);
+}
+
+@media (max-width: 540px) {
+  .upgrade-modal-hero {
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .upgrade-modal-art {
+    width: 76px;
+    height: 76px;
+    border-radius: 22px;
+  }
+
+  .upgrade-modal-title {
+    font-size: 18px;
+  }
+
+  .upgrade-modal-compare {
+    grid-template-columns: 1fr;
+  }
+}
+
 .seg-control {
   display: flex;
   background: var(--bg);
@@ -1257,39 +1409,28 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
 /* ─────────────────────────────────────────
    Furigana
 ───────────────────────────────────────── */
-ruby { ruby-align: center; }
-rt { font-size: 0.54em; color: var(--muted); }
-
 .furigana-text {
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
-  line-height: 1.62;
+  line-height: 1.58;
 }
 
 .ruby-inline {
   ruby-position: over;
   ruby-align: center;
   white-space: normal;
-  line-height: 1.06;
-  display: inline;
+  line-height: 1.02;
   vertical-align: baseline;
   max-width: 100%;
   min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.ruby-base {
-  display: inline;
-  max-width: 100%;
-  min-width: 0;
+  overflow: visible;
 }
 
 .ruby-rt {
-  font-size: 0.45em;
-  line-height: 0.9;
-  color: rgba(94, 94, 114, 0.62);
+  font-size: 0.44em;
+  line-height: 1;
+  color: rgba(94, 94, 114, 0.58);
   font-weight: 500;
   white-space: normal;
   letter-spacing: 0.02em;
@@ -1301,38 +1442,21 @@ rt { font-size: 0.54em; color: var(--muted); }
   vertical-align: top;
 }
 
-.card .ruby-inline,
-.quiz-option .ruby-inline,
-.flashcard-text .ruby-inline,
-.summary-text .ruby-inline,
-.quiz-question-text .ruby-inline,
-.explanation-box .ruby-inline {
-  white-space: normal;
-}
-
-.flashcard-text .ruby-inline,
-.quiz-option .ruby-inline,
-.summary-text .ruby-inline,
-.explanation-box .ruby-inline,
-.card .ruby-inline {
-  line-height: 1.08;
-}
-
 @media (max-width: 480px) {
   .ruby-inline {
-    line-height: 1.02;
+    line-height: 1;
   }
   .ruby-rt {
-    font-size: 0.42em;
-    line-height: 0.88;
-    color: rgba(94, 94, 114, 0.58);
+    font-size: 0.41em;
+    line-height: 1;
+    color: rgba(94, 94, 114, 0.56);
   }
 
   .summary-text,
   .flashcard-text,
   .quiz-question-text,
   .explanation-box {
-    line-height: 1.68;
+    line-height: 1.64;
   }
 }
 
@@ -1565,17 +1689,8 @@ rt { font-size: 0.54em; color: var(--muted); }
   word-break: break-word;
 }
 
-.ruby-inline {
-  display: inline;
-  max-width: 100%;
-  min-width: 0;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
+.ruby-inline,
 .ruby-rt {
-  white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
 }

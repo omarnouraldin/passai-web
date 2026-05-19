@@ -8,6 +8,7 @@ import UpgradeModal from './components/UpgradeModal.jsx';
 import LandingPage from './components/LandingPage.jsx';
 import PrivacyPage from './components/PrivacyPage.jsx';
 import TermsPage from './components/TermsPage.jsx';
+import PricingPage from './components/PricingPage.jsx';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { supabase, SUPABASE_ENABLED } from './lib/supabase.js';
@@ -15,6 +16,21 @@ import { supabase, SUPABASE_ENABLED } from './lib/supabase.js';
 const CHAR_LIMIT  = 8000;
 const HISTORY_KEY = 'passai_history';
 const LANG_KEY = 'passai_landing_lang';
+
+function pathToPage(pathname) {
+  const path = String(pathname || '/').replace(/\/+$/, '') || '/';
+  if (path === '/privacy') return 'privacy';
+  if (path === '/terms') return 'terms';
+  if (path === '/pricing') return 'pricing';
+  return 'landing';
+}
+
+function pageToPath(page) {
+  if (page === 'privacy') return '/privacy';
+  if (page === 'terms') return '/terms';
+  if (page === 'pricing') return '/pricing';
+  return '/';
+}
 
 function loadLocalHistory() {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) ?? []; }
@@ -31,7 +47,7 @@ function detectInitialLocale() {
 
 // ── Inner app (has access to auth context) ───────────────────────────────────
 function AppInner() {
-  const { user, getAccessToken, refreshProfile } = useAuth();
+  const { user, isPro, getAccessToken, refreshProfile } = useAuth();
 
   const [view,          setView]        = useState('home');
   const [isLoading,     setIsLoading]   = useState(false);
@@ -47,7 +63,9 @@ function AppInner() {
   const [abortCtrl,     setAbortCtrl]   = useState(null);
   const [upgradeData,   setUpgradeData] = useState(null); // { used, limit, resetAt }
   const [showAuth,      setShowAuth]    = useState(false);
-  const [page,          setPage]        = useState('landing');
+  const [page,          setPage]        = useState(() => (
+    typeof window === 'undefined' ? 'landing' : pathToPage(window.location.pathname)
+  ));
   const [locale,        setLocale]      = useState(detectInitialLocale);
 
   const isJapanese = language === 'japanese';
@@ -250,17 +268,41 @@ function AppInner() {
     setToast({ msg, type });
   }
 
+  function navigateTo(nextPage) {
+    setPage(nextPage);
+    if (typeof window !== 'undefined') {
+      const nextPath = pageToPath(nextPage);
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState({}, '', nextPath);
+      }
+    }
+  }
+
   function openAuth() {
     setShowAuth(true);
   }
 
-  function openUpgrade() {
-    setPage('landing');
-    setShowAuth(true);
+  function openLanding() {
+    navigateTo('landing');
   }
 
-  function openLanding() {
-    setPage('landing');
+  function openPricing() {
+    navigateTo('pricing');
+  }
+
+  useEffect(() => {
+    const onPopState = () => setPage(pathToPage(window.location.pathname));
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  function startFreeFlow() {
+    if (user) {
+      navigateTo('landing');
+      setView('home');
+      return;
+    }
+    openAuth();
   }
 
   async function startCheckout() {
@@ -297,30 +339,39 @@ function AppInner() {
     <div className="app">
       {isLoading && <LoadingView isJapanese={isJapanese} progress={progress} onCancel={cancelGeneration} />}
 
-      {!user ? (
-        page === 'privacy' ? (
-          <PrivacyPage
-            locale={locale}
-            onBack={openLanding}
-            onOpenAuth={openAuth}
-          />
-        ) : page === 'terms' ? (
-          <TermsPage
-            locale={locale}
-            onBack={openLanding}
-            onOpenAuth={openAuth}
-          />
-        ) : (
-          <LandingPage
-            onTryFree={openAuth}
-            onOpenAuth={openAuth}
-            isJapanese={landingIsJapanese}
-            locale={locale}
-            onLocaleChange={setLocale}
-            onOpenPrivacy={() => setPage('privacy')}
-            onOpenTerms={() => setPage('terms')}
-          />
-        )
+      {page === 'privacy' ? (
+        <PrivacyPage
+          locale={locale}
+          onBack={openLanding}
+          onOpenAuth={openAuth}
+        />
+      ) : page === 'terms' ? (
+        <TermsPage
+          locale={locale}
+          onBack={openLanding}
+          onOpenAuth={openAuth}
+        />
+      ) : page === 'pricing' ? (
+        <PricingPage
+          locale={locale}
+          isSignedIn={!!user}
+          isPro={isPro}
+          onBack={openLanding}
+          onStartFree={startFreeFlow}
+          onUpgrade={startCheckout}
+          onLocaleChange={setLocale}
+        />
+      ) : !user ? (
+        <LandingPage
+          onTryFree={openAuth}
+          onOpenAuth={openAuth}
+          isJapanese={landingIsJapanese}
+          locale={locale}
+          onLocaleChange={setLocale}
+          onOpenPrivacy={() => navigateTo('privacy')}
+          onOpenTerms={() => navigateTo('terms')}
+          onOpenPricing={openPricing}
+        />
       ) : view === 'home' ? (
         <HomeView
           onGenerate={generate}
@@ -331,6 +382,7 @@ function AppInner() {
           setFurigana={setFurigana}
           isJapanese={isJapanese}
           onUpgrade={startCheckout}
+          onOpenPricing={openPricing}
         />
       ) : view === 'results' && generated ? (
           <ResultsView
@@ -384,6 +436,7 @@ function AppInner() {
           isJapanese={isJapanese}
           onClose={() => setUpgradeData(null)}
           onUpgrade={startCheckout}
+          onOpenPricing={openPricing}
         />
       )}
 

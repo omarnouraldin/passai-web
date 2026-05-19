@@ -343,6 +343,7 @@ export default function HomeView({
   furigana, setFurigana,
   isJapanese,
   onUpgrade,
+  onOpenPricing,
 }) {
   const { user, isPro, isAdmin, generationsUsed, enabled, getAccessToken, refreshProfile } = useAuth();
   const FREE_LIMIT = 5;
@@ -704,6 +705,7 @@ export default function HomeView({
           setAdminModel={setAdminModel}
           onToggleSelfPro={handleToggleSelfPro}
           onUpgrade={onUpgrade}
+          onOpenPricing={onOpenPricing}
         />
       )}
       {showAuth && (

@@ -18,6 +18,7 @@ function renderPlain(str, keyPrefix) {
   const parts = [];
 
   lines.forEach((line, lineIdx) => {
+    numRx.lastIndex = 0;
     let last = 0;
     let m;
     while ((m = numRx.exec(line)) !== null) {

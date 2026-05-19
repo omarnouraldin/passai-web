@@ -4,6 +4,19 @@ import { rateLimit, rateLimitResponse, isPlainObject, normalizePayload, clampStr
 
 const FREE_LIMIT = 5;
 const ADMIN_EMAIL = 'omarnourelden3@gmail.com';
+const DEV_LOGS = process.env.NODE_ENV !== 'production';
+
+function monthKey(date) {
+  return date.toISOString().slice(0, 7);
+}
+
+function startOfMonth(date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+}
+
+function startOfNextMonth(date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1));
+}
 
 async function checkUsage(authHeader) {
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -11,6 +24,7 @@ async function checkUsage(authHeader) {
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '';
   const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? '';
+  const supabaseService = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SERVICE_ROLE_KEY ?? '';
   if (!supabaseUrl || !supabaseAnon) return { isPro: false, userId: null, userClient: null, used: 0 };
 
   try {
@@ -18,56 +32,80 @@ async function checkUsage(authHeader) {
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) return { isPro: false, userId: null, userClient: null, used: 0 };
 
-    const userClient = createClient(supabaseUrl, supabaseAnon, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
+    if (!supabaseService) {
+      throw {
+        status: 500,
+        body: { error: 'Missing SUPABASE_SERVICE_ROLE_KEY' },
+      };
+    }
+
+    const profileClient = createClient(supabaseUrl, supabaseService, {
+      auth: { persistSession: false },
     });
 
+    const now = new Date();
+    const month = monthKey(now);
+
     let profile;
-    const { data: fullData, error: fullErr } = await userClient
+    const { data: fullData, error: fullErr } = await profileClient
       .from('profiles')
       .select('is_pro, generations_used, generations_reset_at')
       .eq('id', user.id)
       .single();
     if (fullErr) {
-      const { data: basicData } = await userClient
+      await profileClient.from('profiles').upsert({
+        id: user.id,
+        is_pro: false,
+        generations_used: 0,
+        generations_reset_at: startOfMonth(now).toISOString(),
+      }, { onConflict: 'id' });
+      const { data: seededProfile } = await profileClient
         .from('profiles')
-        .select('is_pro, generations_used')
+        .select('is_pro, generations_used, generations_reset_at')
         .eq('id', user.id)
         .single();
-      profile = basicData;
+      profile = seededProfile;
     } else {
       profile = fullData;
     }
 
     const isPro = profile?.is_pro ?? false;
-    const now = new Date();
     const resetAt = profile?.generations_reset_at ? new Date(profile.generations_reset_at) : null;
-    const msInMonth = 30 * 24 * 60 * 60 * 1000;
-    const needsReset = !resetAt || (now - resetAt) > msInMonth;
+    const needsReset = !resetAt || Number.isNaN(resetAt.getTime()) || monthKey(resetAt) !== monthKey(now);
     let used = profile?.generations_used ?? 0;
 
     if (needsReset) {
-      await userClient.from('profiles').update({
+      await profileClient.from('profiles').upsert({
+        id: user.id,
         generations_used: 0,
-        generations_reset_at: now.toISOString(),
-      }).eq('id', user.id);
+        generations_reset_at: startOfMonth(now).toISOString(),
+      }, { onConflict: 'id' });
       used = 0;
     }
 
     if (!isPro && used >= FREE_LIMIT) {
-      const resetDate = resetAt ? new Date(resetAt.getTime() + msInMonth) : null;
       throw {
         status: 429,
         body: {
           error: 'limit_reached',
           used,
           limit: FREE_LIMIT,
-          resetAt: resetDate?.toISOString() ?? null,
+          resetAt: startOfNextMonth(now).toISOString(),
         },
       };
     }
 
-    return { isPro, userId: user.id, userClient, used };
+    if (DEV_LOGS) {
+      console.info('[api/generate] usage check', {
+        userId: user.id,
+        isPro,
+        usedBefore: used,
+        resetMonth: month,
+        needsReset,
+      });
+    }
+
+    return { isPro, userId: user.id, userClient: profileClient, used };
   } catch (e) {
     if (e.status) throw e;
     return { isPro: false, userId: null, userClient: null, used: 0 };
@@ -77,8 +115,31 @@ async function checkUsage(authHeader) {
 async function incrementUsage(userClient, userId, used) {
   if (!userClient || !userId) return;
   try {
-    await userClient.from('profiles').update({ generations_used: used + 1 }).eq('id', userId);
-  } catch {}
+    const { error } = await userClient.from('profiles').upsert({
+      id: userId,
+      generations_used: used + 1,
+    }, { onConflict: 'id' });
+    if (DEV_LOGS) {
+      console.info('[api/generate] usage increment', {
+        userId,
+        usedBefore: used,
+        usedAfter: used + 1,
+        incrementSucceeded: !error,
+      });
+    }
+    return !error;
+  } catch (err) {
+    if (DEV_LOGS) {
+      console.info('[api/generate] usage increment', {
+        userId,
+        usedBefore: used,
+        usedAfter: used + 1,
+        incrementSucceeded: false,
+        error: err?.message ?? String(err),
+      });
+    }
+    return false;
+  }
 }
 
 async function resolveAdminRequest(authHeader) {
@@ -135,7 +196,7 @@ export default async function handler(req, res) {
   try {
     ({ isPro, userId, userClient, used } = await checkUsage(authHeader));
   } catch (e) {
-    if (e.status === 429) return res.status(429).json(e.body);
+    if (e.status && e.body) return res.status(e.status).json(e.body);
     throw e;
   }
 

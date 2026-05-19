@@ -34,6 +34,7 @@ function OverviewTab({ summary, keyTopics, furigana, isJapanese }) {
 function stripMarkup(text = '') {
   return text
     .replace(/【([^|【】]+)\|([^|【】]+)】/g, '$1')
+    .replace(/([一-龯々仝〆ヶぁ-んァ-ンー]+)【([^【】]+)】/g, '$1')
     .replace(/《([^《》]+)》/g, '$1');
 }
 

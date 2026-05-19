@@ -14,6 +14,7 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3001;
 const ADMIN_EMAIL = 'omarnourelden3@gmail.com';
+const jsonBody = express.json({ limit: '20mb' });
 
 function normalizeEmail(email) {
   return String(email ?? '').trim().toLowerCase();
@@ -66,7 +67,7 @@ async function fetchSubscriptionFromStripe(stripe, subscriptionId) {
   return stripe.subscriptions.retrieve(subscriptionId);
 }
 
-app.post('/api/admin', async (req, res) => {
+app.post('/api/admin', jsonBody, async (req, res) => {
   const limited = rateLimit(req, 'admin');
   if (!limited.allowed) return rateLimitResponse(res, 'admin', limited.retryAfterSeconds);
   if (!isPlainObject(req.body)) return res.status(400).json({ error: 'Malformed JSON body.' });
@@ -145,10 +146,16 @@ app.post('/api/admin', async (req, res) => {
   return res.status(400).json({ error: 'Unknown admin action' });
 });
 
-app.post('/api/stripe-checkout', async (req, res) => {
+app.post('/api/stripe-checkout', jsonBody, async (req, res) => {
   const limited = rateLimit(req, 'stripe');
   if (!limited.allowed) return rateLimitResponse(res, 'stripe', limited.retryAfterSeconds);
   if (!isPlainObject(req.body)) return res.status(400).json({ error: 'Malformed JSON body.' });
+  if (process.env.NODE_ENV !== 'production') {
+    console.info('[api/stripe-checkout] request body received', {
+      hasBody: true,
+      keys: Object.keys(req.body ?? {}),
+    });
+  }
   const token = req.headers.authorization?.startsWith('Bearer ')
     ? req.headers.authorization.slice(7)
     : null;
@@ -234,7 +241,10 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
   return res.json({ received: true });
 });
 
-app.use(express.json({ limit: '20mb' }));
+app.post('/api/generate', jsonBody, generateHandler);
+
+// ── /api/exam — generate and grade mock exams ────────────────────────────────
+app.post('/api/exam', jsonBody, examHandler);
 
 app.use((err, req, res, next) => {
   if (err?.type === 'entity.parse.failed' || err instanceof SyntaxError) {
@@ -242,11 +252,6 @@ app.use((err, req, res, next) => {
   }
   return next(err);
 });
-
-app.post('/api/generate', generateHandler);
-
-// ── /api/exam — generate and grade mock exams ────────────────────────────────
-app.post('/api/exam', examHandler);
 
 app.listen(PORT, () => {
   console.log(`API listening on http://localhost:${PORT}`);

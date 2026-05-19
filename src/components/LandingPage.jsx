@@ -18,7 +18,7 @@ const CONTENT = {
     mockupTitle: 'Weekly lecture notes',
     freeTitle: 'Free',
     proTitle: 'Pro',
-    footer: { privacy: 'Privacy', terms: 'Terms', contact: 'Contact' },
+    footer: { privacy: 'Privacy', terms: 'Terms', contact: 'Support' },
     nav: '日本語',
   },
   ja: {
@@ -38,7 +38,7 @@ const CONTENT = {
     mockupTitle: '今週の講義ノート',
     freeTitle: 'Free',
     proTitle: 'Pro',
-    footer: { privacy: 'プライバシー', terms: '利用規約', contact: 'お問い合わせ' },
+    footer: { privacy: 'プライバシー', terms: '利用規約', contact: 'サポート' },
     nav: 'English',
   },
 };
@@ -52,6 +52,8 @@ export default function LandingPage({
   onOpenPrivacy,
   onOpenTerms,
   onOpenPricing,
+  onOpenDisclaimer,
+  onOpenSupport,
 }) {
   const copy = CONTENT[locale] ?? CONTENT.en;
   const brand = getBrandWordmark(locale === 'ja');
@@ -183,8 +185,9 @@ export default function LandingPage({
       <footer className="landing-footer">
         <a href="#" onClick={e => { e.preventDefault(); onOpenPrivacy(); }}>{copy.footer.privacy}</a>
         <a href="#" onClick={e => { e.preventDefault(); onOpenTerms(); }}>{copy.footer.terms}</a>
+        <a href="#" onClick={e => { e.preventDefault(); onOpenDisclaimer?.(); }}>{locale === 'ja' ? 'AIについて' : 'AI Disclaimer'}</a>
         <a href="#" onClick={e => { e.preventDefault(); onOpenPricing?.(); }}>{locale === 'ja' ? '料金' : 'Pricing'}</a>
-        <a href="mailto:hello@passai.app">{copy.footer.contact}</a>
+        <a href="#" onClick={e => { e.preventDefault(); onOpenSupport?.(); }}>{copy.footer.contact}</a>
       </footer>
     </div>
   );

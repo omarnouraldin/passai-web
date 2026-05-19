@@ -8,6 +8,8 @@ import UpgradeModal from './components/UpgradeModal.jsx';
 import LandingPage from './components/LandingPage.jsx';
 import PrivacyPage from './components/PrivacyPage.jsx';
 import TermsPage from './components/TermsPage.jsx';
+import AIDisclaimerPage from './components/AIDisclaimerPage.jsx';
+import SupportPage from './components/SupportPage.jsx';
 import PricingPage from './components/PricingPage.jsx';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
@@ -21,6 +23,8 @@ function pathToPage(pathname) {
   const path = String(pathname || '/').replace(/\/+$/, '') || '/';
   if (path === '/privacy') return 'privacy';
   if (path === '/terms') return 'terms';
+  if (path === '/ai-disclaimer') return 'ai-disclaimer';
+  if (path === '/support') return 'support';
   if (path === '/pricing') return 'pricing';
   return 'landing';
 }
@@ -28,6 +32,8 @@ function pathToPage(pathname) {
 function pageToPath(page) {
   if (page === 'privacy') return '/privacy';
   if (page === 'terms') return '/terms';
+  if (page === 'ai-disclaimer') return '/ai-disclaimer';
+  if (page === 'support') return '/support';
   if (page === 'pricing') return '/pricing';
   return '/';
 }
@@ -351,6 +357,20 @@ function AppInner() {
           onBack={openLanding}
           onOpenAuth={openAuth}
         />
+      ) : page === 'ai-disclaimer' ? (
+        <AIDisclaimerPage
+          locale={locale}
+          onBack={openLanding}
+          onOpenSupport={() => navigateTo('support')}
+        />
+      ) : page === 'support' ? (
+        <SupportPage
+          locale={locale}
+          onBack={openLanding}
+          onOpenPrivacy={() => navigateTo('privacy')}
+          onOpenTerms={() => navigateTo('terms')}
+          onOpenDisclaimer={() => navigateTo('ai-disclaimer')}
+        />
       ) : page === 'pricing' ? (
         <PricingPage
           locale={locale}
@@ -360,6 +380,10 @@ function AppInner() {
           onStartFree={startFreeFlow}
           onUpgrade={startCheckout}
           onLocaleChange={setLocale}
+          onOpenPrivacy={() => navigateTo('privacy')}
+          onOpenTerms={() => navigateTo('terms')}
+          onOpenDisclaimer={() => navigateTo('ai-disclaimer')}
+          onOpenSupport={() => navigateTo('support')}
         />
       ) : !user ? (
         <LandingPage
@@ -371,6 +395,8 @@ function AppInner() {
           onOpenPrivacy={() => navigateTo('privacy')}
           onOpenTerms={() => navigateTo('terms')}
           onOpenPricing={openPricing}
+          onOpenDisclaimer={() => navigateTo('ai-disclaimer')}
+          onOpenSupport={() => navigateTo('support')}
         />
       ) : view === 'home' ? (
         <HomeView
@@ -383,6 +409,10 @@ function AppInner() {
           isJapanese={isJapanese}
           onUpgrade={startCheckout}
           onOpenPricing={openPricing}
+          onOpenPrivacy={() => navigateTo('privacy')}
+          onOpenTerms={() => navigateTo('terms')}
+          onOpenDisclaimer={() => navigateTo('ai-disclaimer')}
+          onOpenSupport={() => navigateTo('support')}
         />
       ) : view === 'results' && generated ? (
           <ResultsView

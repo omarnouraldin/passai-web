@@ -9,6 +9,10 @@ export default function SettingsModal({
   onToggleSelfPro,
   onUpgrade,
   onOpenPricing,
+  onOpenPrivacy,
+  onOpenTerms,
+  onOpenDisclaimer,
+  onOpenSupport,
 }) {
   const { theme, toggleTheme } = useTheme();
   const { user, isPro, isAdmin, generationsUsed, signOut, enabled } = useAuth();
@@ -217,6 +221,13 @@ export default function SettingsModal({
           <button className="btn btn-ghost" style={{ width: '100%' }} onClick={onClose}>
             {isJapanese ? '閉じる' : 'Done'}
           </button>
+        </div>
+
+        <div className="settings-footer-links">
+          <button className="settings-footer-link" onClick={onOpenPrivacy}>{isJapanese ? 'プライバシー' : 'Privacy'}</button>
+          <button className="settings-footer-link" onClick={onOpenTerms}>{isJapanese ? '利用規約' : 'Terms'}</button>
+          <button className="settings-footer-link" onClick={onOpenDisclaimer}>{isJapanese ? 'AIについて' : 'AI Disclaimer'}</button>
+          <button className="settings-footer-link" onClick={onOpenSupport}>{isJapanese ? 'サポート' : 'Support'}</button>
         </div>
       </div>
     </div>

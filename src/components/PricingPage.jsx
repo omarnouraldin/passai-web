@@ -86,6 +86,10 @@ export default function PricingPage({
   onStartFree,
   onUpgrade,
   onLocaleChange,
+  onOpenPrivacy,
+  onOpenTerms,
+  onOpenDisclaimer,
+  onOpenSupport,
 }) {
   const copy = COPY[locale] ?? COPY.en;
   const brand = getBrandWordmark(locale === 'ja');
@@ -176,6 +180,13 @@ export default function PricingPage({
           ))}
         </div>
       </section>
+
+      <footer className="landing-footer pricing-footer">
+        <a href="#" onClick={e => { e.preventDefault(); onOpenPrivacy?.(); }}>{locale === 'ja' ? 'プライバシー' : 'Privacy'}</a>
+        <a href="#" onClick={e => { e.preventDefault(); onOpenTerms?.(); }}>{locale === 'ja' ? '利用規約' : 'Terms'}</a>
+        <a href="#" onClick={e => { e.preventDefault(); onOpenDisclaimer?.(); }}>{locale === 'ja' ? 'AIについて' : 'AI Disclaimer'}</a>
+        <a href="#" onClick={e => { e.preventDefault(); onOpenSupport?.(); }}>{locale === 'ja' ? 'サポート' : 'Support'}</a>
+      </footer>
     </div>
   );
 }

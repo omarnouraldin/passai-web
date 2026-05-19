@@ -344,6 +344,10 @@ export default function HomeView({
   isJapanese,
   onUpgrade,
   onOpenPricing,
+  onOpenPrivacy,
+  onOpenTerms,
+  onOpenDisclaimer,
+  onOpenSupport,
 }) {
   const { user, isPro, isAdmin, generationsUsed, enabled, getAccessToken, refreshProfile } = useAuth();
   const FREE_LIMIT = 5;
@@ -706,6 +710,10 @@ export default function HomeView({
           onToggleSelfPro={handleToggleSelfPro}
           onUpgrade={onUpgrade}
           onOpenPricing={onOpenPricing}
+          onOpenPrivacy={onOpenPrivacy}
+          onOpenTerms={onOpenTerms}
+          onOpenDisclaimer={onOpenDisclaimer}
+          onOpenSupport={onOpenSupport}
         />
       )}
       {showAuth && (

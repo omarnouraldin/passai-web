@@ -614,6 +614,10 @@ export default function HomeView({
   function handleGenerate() {
     const mergedText = buildMergedText();
     if (!mergedText) return;
+    if (readyFiles.length > 0) {
+      onGenerate(noteText.trim(), { text: mergedText }, adminModel);
+      return;
+    }
     onGenerate(mergedText, null, adminModel);
   }
 

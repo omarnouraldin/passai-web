@@ -3,6 +3,14 @@ import { rateLimit, rateLimitResponse, isPlainObject, normalizePayload } from '.
 
 const ADMIN_EMAIL = 'omarnourelden3@gmail.com';
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '20mb',
+    },
+  },
+};
+
 function normalizeEmail(email) {
   return String(email ?? '').trim().toLowerCase();
 }

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import FuriganaText from '../FuriganaText.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { supabase, SUPABASE_ENABLED } from '../../lib/supabase.js';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
+const EXAM_STORAGE_PREFIX = 'passai_exam_state';
 
 // ── Get access token helper ───────────────────────────────────────────────────
 async function getToken() {
@@ -20,8 +21,40 @@ function gradeLabel(pct, isJapanese) {
   return isJapanese ? '要復習 📚' : 'Needs Review 📚';
 }
 
+function getStorageKey(contentId) {
+  return `${EXAM_STORAGE_PREFIX}:${contentId ?? 'default'}`;
+}
+
+function loadExamSnapshot(contentId) {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(getStorageKey(contentId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveExamSnapshot(contentId, snapshot) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(getStorageKey(contentId), JSON.stringify(snapshot));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function clearExamSnapshot(contentId) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(getStorageKey(contentId));
+  } catch {
+    // ignore storage failures
+  }
+}
+
 // ── Pro gate ─────────────────────────────────────────────────────────────────
-function ProGate({ isJapanese }) {
+function ProGate({ isJapanese, onUpgrade }) {
   return (
     <div style={{ textAlign: 'center', padding: '32px 16px' }}>
       <div style={{ fontSize: 56, marginBottom: 16 }}>🎓</div>
@@ -46,7 +79,7 @@ function ProGate({ isJapanese }) {
         <ul style={{ margin: '10px 0 0', padding: '0 0 0 18px', lineHeight: 2 }}>
           <li>{isJapanese ? '混合形式の模擬試験' : 'Full mixed-format mock exams'}</li>
           <li>{isJapanese ? 'AI による短答採点' : 'AI-graded short answer questions'}</li>
-          <li>{isJapanese ? '高品質な Sonnet モデル' : 'Faster, higher quality AI (Sonnet)'}</li>
+          <li>{isJapanese ? 'より高度な AI 理解' : 'Advanced AI explanations'}</li>
           <li>{isJapanese ? '無制限の生成' : 'Unlimited generations'}</li>
         </ul>
       </div>
@@ -60,7 +93,7 @@ function ProGate({ isJapanese }) {
 
 // ── Main ExamTab ──────────────────────────────────────────────────────────────
 export default function ExamTab({ originalInput, furigana, isJapanese, contentId, onUpgrade }) {
-  const { isPro } = useAuth();
+  const { isPro, refreshProfile } = useAuth();
 
   const [examState,  setExamState]  = useState('idle');    // idle | generating | ready | evaluating | done
   const [examData,   setExamData]   = useState(null);
@@ -70,11 +103,152 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
   const [fbAnswers,  setFbAnswers]  = useState(['', '', '']); // fill blank text
   const [results,    setResults]    = useState(null);
   const [error,      setError]      = useState(null);
+  const [proReady,   setProReady]    = useState(false);
+  const [displayProgress, setDisplayProgress] = useState(8);
+  const [loadingStageIndex, setLoadingStageIndex] = useState(0);
+  const [showLongRunning, setShowLongRunning] = useState(false);
+  const [loadingDots, setLoadingDots] = useState(1);
+
+  const loadingStages = useMemo(() => (
+    isJapanese
+      ? ['試験素材を読む', '出題候補を見つける', '多肢選択を作る', '短答式を作る', '仕上げ中']
+      : ['Reading your study material', 'Finding likely exam topics', 'Writing multiple-choice questions', 'Creating short-answer questions', 'Finalizing your exam']
+  ), [isJapanese]);
+
+  const loadingTips = useMemo(() => (
+    isJapanese
+      ? [
+          '少し長くかかっても、試験は続いています。',
+          '問題数が多いほど、少し時間がかかることがあります。',
+          '生成が終わるまで、この画面でお待ちください。',
+        ]
+      : [
+          'This is still working — full exams take a bit longer than summaries.',
+          'More detailed notes can take a little extra time to turn into questions.',
+          'We’re building the exam step by step so the questions stay useful.',
+        ]
+  ), [isJapanese]);
+  const [tipIndex, setTipIndex] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function syncProAndRestore() {
+      setProReady(false);
+      const restoreSnapshot = () => {
+        const snapshot = loadExamSnapshot(contentId);
+        if (snapshot) {
+          setExamState(snapshot.examState ?? 'idle');
+          setExamData(snapshot.examData ?? null);
+          setProgress(Number(snapshot.progress ?? 0));
+          setMcqAnswers(snapshot.mcqAnswers ?? {});
+          setSaAnswers(Array.isArray(snapshot.saAnswers) ? snapshot.saAnswers : ['', '', '']);
+          setFbAnswers(Array.isArray(snapshot.fbAnswers) ? snapshot.fbAnswers : ['', '', '']);
+          setResults(snapshot.results ?? null);
+          setError(snapshot.error ?? null);
+          return true;
+        }
+        setExamState('idle');
+        setExamData(null);
+        setProgress(0);
+        setMcqAnswers({});
+        setSaAnswers(['', '', '']);
+        setFbAnswers(['', '', '']);
+        setResults(null);
+        setError(null);
+        return false;
+      };
+
+      if (!isPro) {
+        try {
+          await refreshProfile();
+        } catch {
+          // ignore refresh failures and rely on current context state
+        }
+      }
+
+      if (!alive) return;
+      restoreSnapshot();
+      if (alive) setProReady(true);
+    }
+
+    syncProAndRestore();
+    return () => {
+      alive = false;
+    };
+  }, [contentId]);
+
+  useEffect(() => {
+    if (!proReady || !contentId) return;
+    saveExamSnapshot(contentId, {
+      examState,
+      examData,
+      progress,
+      mcqAnswers,
+      saAnswers,
+      fbAnswers,
+      results,
+      error,
+    });
+  }, [contentId, proReady, examState, examData, progress, mcqAnswers, saAnswers, fbAnswers, results, error]);
+
+  useEffect(() => {
+    if (examState !== 'generating') {
+      setShowLongRunning(false);
+      setLoadingDots(1);
+      setTipIndex(0);
+      setLoadingStageIndex(0);
+      if (examState !== 'ready' && examState !== 'done') {
+        setDisplayProgress(8);
+      }
+      return;
+    }
+
+    const stageForProgress = value => {
+      if (value <= 20) return 0;
+      if (value <= 40) return 1;
+      if (value <= 60) return 2;
+      if (value <= 85) return 3;
+      return 4;
+    };
+
+    const dotTimer = setInterval(() => setLoadingDots(d => d % 3 + 1), 450);
+    const tipTimer = setInterval(() => setTipIndex(i => (i + 1) % loadingTips.length), 4500);
+    const progressTimer = setInterval(() => {
+      setDisplayProgress(prev => {
+        const next = Math.min(95, Math.max(prev, progress || 8) + 1);
+        setLoadingStageIndex(stageForProgress(next));
+        return next;
+      });
+    }, 1200);
+    const longRunningTimer = setTimeout(() => setShowLongRunning(true), 24000);
+
+    return () => {
+      clearInterval(dotTimer);
+      clearInterval(tipTimer);
+      clearInterval(progressTimer);
+      clearTimeout(longRunningTimer);
+    };
+  }, [examState, loadingTips.length, progress]);
+
+  useEffect(() => {
+    if (examState !== 'generating') return;
+    setDisplayProgress(prev => Math.max(prev, Number(progress) || 8));
+    if (Number(progress) >= 96) {
+      setDisplayProgress(Number(progress));
+    }
+  }, [progress, examState]);
 
   // ── Generate exam ───────────────────────────────────────────────────────
   async function generateExam() {
+    clearExamSnapshot(contentId);
     setExamState('generating');
-    setProgress(0);
+    setProgress(8);
+    setDisplayProgress(8);
+    setLoadingStageIndex(0);
+    setTipIndex(0);
+    setLoadingDots(1);
+    setShowLongRunning(false);
     setError(null);
     setMcqAnswers({});
     setSaAnswers(['', '', '']);
@@ -117,7 +291,14 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
           if (!line.startsWith('data: ')) continue;
           try {
             const event = JSON.parse(line.slice(6));
-            if (event.type === 'progress') setProgress(event.value);
+            if (event.type === 'progress') {
+              const nextValue = Number(event.value);
+              if (Number.isFinite(nextValue)) {
+                setProgress(nextValue);
+                setDisplayProgress(prev => Math.max(prev, nextValue));
+                setLoadingStageIndex(nextValue <= 20 ? 0 : nextValue <= 40 ? 1 : nextValue <= 60 ? 2 : nextValue <= 85 ? 3 : 4);
+              }
+            }
             if (event.type === 'result')   { data = event.data; break outer; }
             if (event.type === 'error')    throw new Error(event.message);
           } catch (e) {
@@ -128,10 +309,17 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
 
       if (!data) throw new Error('No exam data received');
       setExamData(data);
+      setProgress(100);
+      setDisplayProgress(100);
+      setLoadingStageIndex(4);
       setExamState('ready');
     } catch (err) {
       setError(err.message);
       setExamState('idle');
+      setProgress(0);
+      setDisplayProgress(8);
+      setLoadingStageIndex(0);
+      setShowLongRunning(false);
     }
   }
 
@@ -194,7 +382,18 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
   const canSubmit = allMcqAnswered && allSaAnswered && allFbAnswered;
 
   // ── Pro gate ────────────────────────────────────────────────────────────
-  if (!isPro) return <ProGate isJapanese={isJapanese} />;
+  if (!proReady) {
+    return (
+      <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+        <div style={{ fontSize: 40, marginBottom: 16 }}>⏳</div>
+        <div style={{ fontSize: 14, color: 'var(--muted)' }}>
+          {isJapanese ? '試験モードを確認中...' : 'Checking Exam Mode access...'}
+        </div>
+      </div>
+    );
+  }
+
+  if (!isPro) return <ProGate isJapanese={isJapanese} onUpgrade={onUpgrade} />;
 
   // ── Idle state ──────────────────────────────────────────────────────────
   if (examState === 'idle') {
@@ -222,17 +421,31 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
     return (
       <div style={{ textAlign: 'center', padding: '48px 16px' }}>
         <div style={{ fontSize: 40, marginBottom: 20 }}>⏳</div>
-        <div style={{ fontSize: 15, color: 'var(--muted)', marginBottom: 20 }}>
-          {isJapanese ? '試験を生成中...' : 'Generating your exam...'}
+        <div style={{ fontSize: 15, color: 'var(--muted)', marginBottom: 14 }}>
+          {loadingStages[loadingStageIndex]}
+          <span style={{ display: 'inline-block', minWidth: 24 }}>{'.'.repeat(loadingDots)}</span>
         </div>
         <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
           <div style={{
-            height: '100%', width: `${progress}%`,
+            height: '100%', width: `${displayProgress}%`,
             background: 'linear-gradient(90deg, #6b60ff, #a78bfa)',
             borderRadius: 99, transition: 'width 0.3s ease-out',
           }} />
         </div>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>{Math.round(progress)}%</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>{Math.round(displayProgress)}%</div>
+        <div style={{ marginTop: 16, display: 'grid', gap: 8, textAlign: 'left' }}>
+          {loadingStages.map((stage, index) => (
+            <div key={stage} style={{ display: 'flex', alignItems: 'center', gap: 8, color: index < loadingStageIndex ? 'var(--text)' : index === loadingStageIndex ? 'var(--accent)' : 'var(--muted)', fontSize: 12 }}>
+              <span style={{ width: 18, height: 18, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: index < loadingStageIndex ? 'rgba(48,209,88,0.14)' : index === loadingStageIndex ? 'rgba(107,96,255,0.18)' : 'rgba(255,255,255,0.05)', color: index < loadingStageIndex ? 'var(--color-green)' : index === loadingStageIndex ? 'var(--accent)' : 'var(--muted)', fontSize: 11, flexShrink: 0 }}>{index < loadingStageIndex ? '✓' : index + 1}</span>
+              <span>{stage}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 16, fontSize: 12, color: 'var(--muted)', minHeight: 18 }}>
+          {showLongRunning
+            ? (isJapanese ? '通常より少し長くかかっていますが、処理は続いています。' : 'This is taking longer than usual, but we’re still working.')
+            : loadingTips[tipIndex]}
+        </div>
       </div>
     );
   }
@@ -326,7 +539,17 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
           );
         })}
 
-        <button className="btn btn-primary" style={{ width: '100%', marginTop: 24 }} onClick={() => { setExamState('idle'); setExamData(null); }}>
+        <button className="btn btn-primary" style={{ width: '100%', marginTop: 24 }} onClick={() => {
+          clearExamSnapshot(contentId);
+          setExamState('idle');
+          setExamData(null);
+          setProgress(0);
+          setMcqAnswers({});
+          setSaAnswers(['', '', '']);
+          setFbAnswers(['', '', '']);
+          setResults(null);
+          setError(null);
+        }}>
           🔄 {isJapanese ? '新しい試験を生成' : 'Generate New Exam'}
         </button>
       </div>

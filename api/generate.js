@@ -1,6 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
 import { buildStudyPrompt, generateStudyMaterial, resolveOpenAIModel, OPENAI_ADMIN_MODELS } from '../lib/openaiStudy.js';
 import { rateLimit, rateLimitResponse, isPlainObject, normalizePayload, clampString, asBoolean } from '../lib/security.js';
+import { getAuthedUser, getProStatus, getSupabaseServiceClient, getTokenFromAuthHeader } from '../lib/serverAuth.js';
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '20mb',
+    },
+  },
+};
 
 const FREE_LIMIT = 5;
 const ADMIN_EMAIL = 'omarnourelden3@gmail.com';
@@ -19,29 +27,20 @@ function startOfNextMonth(date) {
 }
 
 async function checkUsage(authHeader) {
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const token = getTokenFromAuthHeader(authHeader);
   if (!token) return { isPro: false, userId: null, userClient: null, used: 0 };
 
-  const supabaseUrl = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '';
-  const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? '';
-  const supabaseService = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SERVICE_ROLE_KEY ?? '';
-  if (!supabaseUrl || !supabaseAnon) return { isPro: false, userId: null, userClient: null, used: 0 };
-
   try {
-    const supabase = createClient(supabaseUrl, supabaseAnon);
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) return { isPro: false, userId: null, userClient: null, used: 0 };
+    const { user, isPro } = await getProStatus(authHeader);
+    if (!user) return { isPro: false, userId: null, userClient: null, used: 0 };
 
-    if (!supabaseService) {
+    const profileClient = getSupabaseServiceClient();
+    if (!profileClient) {
       throw {
         status: 500,
         body: { error: 'Missing SUPABASE_SERVICE_ROLE_KEY' },
       };
     }
-
-    const profileClient = createClient(supabaseUrl, supabaseService, {
-      auth: { persistSession: false },
-    });
 
     const now = new Date();
     const month = monthKey(now);
@@ -69,7 +68,7 @@ async function checkUsage(authHeader) {
       profile = fullData;
     }
 
-    const isPro = profile?.is_pro ?? false;
+    const currentIsPro = profile?.is_pro ?? isPro ?? false;
     const resetAt = profile?.generations_reset_at ? new Date(profile.generations_reset_at) : null;
     const needsReset = !resetAt || Number.isNaN(resetAt.getTime()) || monthKey(resetAt) !== monthKey(now);
     let used = profile?.generations_used ?? 0;
@@ -83,7 +82,7 @@ async function checkUsage(authHeader) {
       used = 0;
     }
 
-    if (!isPro && used >= FREE_LIMIT) {
+    if (!currentIsPro && used >= FREE_LIMIT) {
       throw {
         status: 429,
         body: {
@@ -98,14 +97,14 @@ async function checkUsage(authHeader) {
     if (DEV_LOGS) {
       console.info('[api/generate] usage check', {
         userId: user.id,
-        isPro,
+        isPro: currentIsPro,
         usedBefore: used,
         resetMonth: month,
         needsReset,
       });
     }
 
-    return { isPro, userId: user.id, userClient: profileClient, used };
+    return { isPro: currentIsPro, userId: user.id, userClient: profileClient, used };
   } catch (e) {
     if (e.status) throw e;
     return { isPro: false, userId: null, userClient: null, used: 0 };
@@ -143,17 +142,9 @@ async function incrementUsage(userClient, userId, used) {
 }
 
 async function resolveAdminRequest(authHeader) {
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return { isAdmin: false };
-
-  const supabaseUrl = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '';
-  const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? '';
-  if (!supabaseUrl || !supabaseAnon) return { isAdmin: false };
-
   try {
-    const supabase = createClient(supabaseUrl, supabaseAnon);
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) return { isAdmin: false };
+    const user = await getAuthedUser(authHeader);
+    if (!user) return { isAdmin: false };
     return { isAdmin: String(user.email ?? '').trim().toLowerCase() === ADMIN_EMAIL };
   } catch {
     return { isAdmin: false };
@@ -191,6 +182,9 @@ export default async function handler(req, res) {
   const hasImage = !!imageBase64;
   const hasText = noteText && noteText.trim().length > 0;
   if (!hasImage && !hasText) return res.status(400).json({ error: 'No content provided.' });
+  if (hasImage && !/^image\/[a-z0-9.+-]+$/i.test(mediaType)) {
+    return res.status(400).json({ error: 'Unsupported image type.' });
+  }
 
   let isPro = false, userId = null, userClient = null, used = 0;
   try {

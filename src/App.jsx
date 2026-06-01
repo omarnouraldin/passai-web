@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import HomeView from './components/HomeView.jsx';
 import ResultsView from './components/ResultsView.jsx';
 import HistoryView from './components/HistoryView.jsx';
@@ -76,6 +76,7 @@ function AppInner() {
 
   const isJapanese = language === 'japanese';
   const landingIsJapanese = locale === 'ja';
+  const progressSeenAtRef = useRef(Date.now());
 
   // ── Persist history locally ────────────────────────────────────────────
   useEffect(() => {
@@ -150,6 +151,24 @@ function AppInner() {
     setAbortCtrl(null);
   }
 
+  useEffect(() => {
+    if (!isLoading) {
+      progressSeenAtRef.current = Date.now();
+      return;
+    }
+    progressSeenAtRef.current = Date.now();
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (!isLoading) return;
+    const t = setInterval(() => {
+      const stalledFor = Date.now() - progressSeenAtRef.current;
+      if (stalledFor < 1400) return;
+      setProgress(prev => (prev >= 95 ? prev : Math.min(prev + 1, 95)));
+    }, 1100);
+    return () => clearInterval(t);
+  }, [isLoading]);
+
   // fileData = { text } | { imageBase64, mediaType } | null
   async function generate(noteText, fileData, adminModel = 'auto') {
     const controller = new AbortController();
@@ -208,7 +227,10 @@ function AppInner() {
           if (!line.startsWith('data: ')) continue;
           try {
             const event = JSON.parse(line.slice(6));
-            if (event.type === 'progress') setProgress(event.value);
+            if (event.type === 'progress') {
+              progressSeenAtRef.current = Date.now();
+              setProgress(event.value);
+            }
             if (event.type === 'result')   { data = event.data; break outer; }
             if (event.type === 'error')    throw new Error(event.message);
           } catch (e) {
@@ -341,6 +363,36 @@ function AppInner() {
     }
   }
 
+  async function openBillingPortal() {
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
+
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        setShowAuth(true);
+        return;
+      }
+
+      const res = await fetch('/api/stripe-portal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error ?? 'Could not open billing portal');
+      if (!data?.url) throw new Error('Billing portal URL missing');
+      window.location.assign(data.url);
+    } catch (err) {
+      showToast(err?.message ?? 'Could not open billing portal', 'error');
+    }
+  }
+
   return (
     <div className="app">
       {isLoading && <LoadingView isJapanese={isJapanese} progress={progress} onCancel={cancelGeneration} />}
@@ -408,6 +460,7 @@ function AppInner() {
           setFurigana={setFurigana}
           isJapanese={isJapanese}
           onUpgrade={startCheckout}
+          onManageBilling={openBillingPortal}
           onOpenPricing={openPricing}
           onOpenPrivacy={() => navigateTo('privacy')}
           onOpenTerms={() => navigateTo('terms')}

@@ -8,6 +8,7 @@ export default function SettingsModal({
   adminModel, setAdminModel,
   onToggleSelfPro,
   onUpgrade,
+  onManageBilling,
   onOpenPricing,
   onOpenPrivacy,
   onOpenTerms,
@@ -145,14 +146,23 @@ export default function SettingsModal({
 
                 {/* Pro badge */}
                 {isPro && (
-                  <div style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    background: 'rgba(107,96,255,0.12)', border: '1px solid rgba(107,96,255,0.3)',
-                    borderRadius: 50, padding: '4px 12px',
-                    fontSize: 12, fontWeight: 700, color: 'var(--accent)',
-                  }}>
-                    ✦ {isJapanese ? 'Proプラン' : 'Pro plan'}
-                  </div>
+                  <>
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      background: 'rgba(107,96,255,0.12)', border: '1px solid rgba(107,96,255,0.3)',
+                      borderRadius: 50, padding: '4px 12px',
+                      fontSize: 12, fontWeight: 700, color: 'var(--accent)',
+                    }}>
+                      ✦ {isJapanese ? 'Proプラン' : 'Pro plan'}
+                    </div>
+                    <button
+                      className="btn btn-ghost"
+                      style={{ width: '100%', height: 36, fontSize: 13 }}
+                      onClick={onManageBilling}
+                    >
+                      {isJapanese ? '請求を管理' : 'Manage billing'}
+                    </button>
+                  </>
                 )}
 
                 <button

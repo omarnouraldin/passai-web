@@ -1,5 +1,5 @@
 // PassAI Service Worker — enables PWA offline shell + asset caching
-const CACHE = 'passai-v1';
+const CACHE = 'passai-v2';
 
 const PRECACHE = [
   '/',

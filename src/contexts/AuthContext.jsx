@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase, SUPABASE_ENABLED } from '../lib/supabase.js';
 
 const AuthContext = createContext(null);
@@ -9,6 +9,9 @@ export function AuthProvider({ children }) {
   const [isAdmin,          setIsAdmin]          = useState(false);
   const [generationsUsed,  setGenerationsUsed]  = useState(0);
   const [loading,          setLoading]          = useState(true);
+  const lastAdminFetchRef = useRef('');
+  const lastAdminFetchAtRef = useRef(0);
+  const adminFetchPromiseRef = useRef(null);
 
   // Fetch profile (pro status + usage count)
   async function fetchProfile(userId) {
@@ -33,26 +36,39 @@ export function AuthProvider({ children }) {
     setGenerationsUsed(data.generations_used ?? 0);
   }
 
-  async function fetchAdminState(token) {
+  async function fetchAdminState(token, { force = false } = {}) {
     if (!token) return;
+    const now = Date.now();
+    if (adminFetchPromiseRef.current) return adminFetchPromiseRef.current;
+    if (!force) {
+      if (lastAdminFetchRef.current === token && (now - lastAdminFetchAtRef.current) < 15000) return;
+    }
     try {
-      const url = '/api/admin';
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ action: 'get_me' }),
-      });
-      const text = await res.text();
-      if (!res.ok) return;
-      const data = JSON.parse(text);
-      setIsAdmin(!!data?.isAdmin);
-      if (typeof data?.isPro === 'boolean') setIsPro(data.isPro);
-      if (typeof data?.generationsUsed === 'number') setGenerationsUsed(data.generationsUsed);
+      const promise = (async () => {
+        const url = '/api/admin';
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ action: 'get_me' }),
+        });
+        const text = await res.text();
+        if (!res.ok) return;
+        const data = JSON.parse(text);
+        lastAdminFetchRef.current = token;
+        lastAdminFetchAtRef.current = Date.now();
+        setIsAdmin(!!data?.isAdmin);
+        if (typeof data?.isPro === 'boolean') setIsPro(data.isPro);
+        if (typeof data?.generationsUsed === 'number') setGenerationsUsed(data.generationsUsed);
+      })();
+      adminFetchPromiseRef.current = promise;
+      await promise;
     } catch (err) {
       void err;
+    } finally {
+      adminFetchPromiseRef.current = null;
     }
   }
 
@@ -66,7 +82,7 @@ export function AuthProvider({ children }) {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       await fetchProfile(session.user.id);
-      await fetchAdminState(session.access_token);
+      await fetchAdminState(session.access_token, { force: true });
       if (patch) {
         if (typeof patch.isPro === 'boolean') setIsPro(patch.isPro);
         if (typeof patch.isAdmin === 'boolean') setIsAdmin(patch.isAdmin);
@@ -98,20 +114,12 @@ export function AuthProvider({ children }) {
         setIsPro(false);
         setIsAdmin(false);
         setGenerationsUsed(0);
+        lastAdminFetchRef.current = '';
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  useEffect(() => {
-    if (!SUPABASE_ENABLED || !user) return;
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.access_token) {
-        fetchAdminState(session.access_token);
-      }
-    });
-  }, [user]);
 
   async function signUp(email, password) {
     const { error } = await supabase.auth.signUp({ email, password });

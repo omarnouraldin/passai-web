@@ -5,6 +5,8 @@ import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import generateHandler from './api/generate.js';
 import examHandler from './api/exam.js';
+import ocrHandler from './api/ocr.js';
+import stripePortalHandler from './api/stripe-portal.js';
 import { rateLimit, rateLimitResponse, isPlainObject } from './lib/security.js';
 
 dotenv.config();
@@ -184,6 +186,8 @@ app.post('/api/stripe-checkout', jsonBody, async (req, res) => {
   return res.json({ url: session.url });
 });
 
+app.post('/api/stripe-portal', jsonBody, stripePortalHandler);
+
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const limited = rateLimit(req, 'webhook');
   if (!limited.allowed) return rateLimitResponse(res, 'webhook', limited.retryAfterSeconds);
@@ -242,6 +246,9 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
 });
 
 app.post('/api/generate', jsonBody, generateHandler);
+
+// ── /api/ocr — image OCR / extraction ───────────────────────────────────────
+app.post('/api/ocr', jsonBody, ocrHandler);
 
 // ── /api/exam — generate and grade mock exams ────────────────────────────────
 app.post('/api/exam', jsonBody, examHandler);

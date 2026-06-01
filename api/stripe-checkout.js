@@ -2,6 +2,14 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit, rateLimitResponse, isPlainObject } from '../lib/security.js';
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '20mb',
+    },
+  },
+};
+
 function getEnv() {
   return {
     supabaseUrl: process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '',

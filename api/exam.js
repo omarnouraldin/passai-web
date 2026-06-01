@@ -1,29 +1,25 @@
-import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import { rateLimit, rateLimitResponse, isPlainObject, normalizePayload, clampString, asStringArray } from '../lib/security.js';
+import { getProStatus } from '../lib/serverAuth.js';
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '20mb',
+    },
+  },
+};
 
 function getEnv() {
   return {
-    supabaseUrl: process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '',
-    supabaseAnon: process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? '',
     apiKey: process.env.OPENAI_API_KEY ?? '',
   };
 }
 
 async function getIsPro(authHeader) {
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return false;
-  const { supabaseUrl, supabaseAnon } = getEnv();
-  if (!supabaseUrl || !supabaseAnon) return false;
   try {
-    const supabase = createClient(supabaseUrl, supabaseAnon);
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) return false;
-    const userClient = createClient(supabaseUrl, supabaseAnon, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-    const { data: profile } = await userClient.from('profiles').select('is_pro').eq('id', user.id).single();
-    return profile?.is_pro ?? false;
+    const { user, isPro } = await getProStatus(authHeader);
+    return !!user && !!isPro;
   } catch {
     return false;
   }

@@ -34,6 +34,7 @@ export default function LoadingView({ isJapanese, progress = 0, onCancel }) {
   const brand = getBrandWordmark(isJapanese);
   const [dots, setDots] = useState(1);
   const [tipIdx, setTipIdx] = useState(0);
+  const [isStalled, setIsStalled] = useState(false);
   const safeProgress = Number.isFinite(Number(progress))
     ? Math.max(0, Math.min(100, Number(progress)))
     : 0;
@@ -60,11 +61,13 @@ export default function LoadingView({ isJapanese, progress = 0, onCancel }) {
 
   useEffect(() => {
     setDisplayProgress(prev => Math.max(prev, safeProgress));
+    setIsStalled(false);
   }, [safeProgress]);
 
   useEffect(() => {
     if (safeProgress >= 96) {
       setDisplayProgress(safeProgress);
+      setIsStalled(false);
       return;
     }
 
@@ -72,11 +75,18 @@ export default function LoadingView({ isJapanese, progress = 0, onCancel }) {
       setDisplayProgress(prev => {
         const target = Math.max(prev, safeProgress);
         if (target >= 95) return 95;
-        return Math.min(target + 2, 95);
+        return Math.min(Math.max(target + 1, prev + 1), 95);
       });
     }, 900);
 
-    return () => clearInterval(t);
+    const stallTimer = setTimeout(() => {
+      if (safeProgress < 95) setIsStalled(true);
+    }, 12000);
+
+    return () => {
+      clearInterval(t);
+      clearTimeout(stallTimer);
+    };
   }, [safeProgress]);
 
   return (
@@ -125,6 +135,17 @@ export default function LoadingView({ isJapanese, progress = 0, onCancel }) {
                 <div className="loading-tip-label">{isJapanese ? 'ヒント' : 'Tip'}</div>
                 <div className="loading-tip-text">{tips[tipIdx]}</div>
               </div>
+
+              {isStalled && (
+                <div className="loading-tip-card" style={{ borderColor: 'rgba(107,96,255,0.35)' }}>
+                  <div className="loading-tip-label">{isJapanese ? '少し長めです' : 'Taking longer'}</div>
+                  <div className="loading-tip-text">
+                    {isJapanese
+                      ? 'もう少し時間がかかっています。処理は続いています。'
+                      : 'This is taking longer than expected. Your request is still processing.'}
+                  </div>
+                </div>
+              )}
 
               <div className="loading-percent">{Math.round(displayProgress)}%</div>
             </div>

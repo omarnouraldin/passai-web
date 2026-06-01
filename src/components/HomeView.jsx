@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
-import heic2any from 'heic2any';
 import mammoth from 'mammoth';
 import SettingsModal from './SettingsModal.jsx';
 import AuthModal from './AuthModal.jsx';
@@ -18,6 +17,9 @@ const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MIN_VALID_TEXT = 40;
 const BLUR_WARNING_SCORE = 70;
 const BLUR_ERROR_SCORE = 35;
+const DEV_LOGS = import.meta.env.DEV;
+
+let heic2anyPromise = null;
 
 function formatSize(bytes) {
   if (bytes < 1024)        return `${bytes} B`;
@@ -64,8 +66,23 @@ function isHeicFile(file) {
   return HEIC_EXTS.includes(ext) || HEIC_MIME_TYPES.includes((file.type || '').toLowerCase());
 }
 
+async function getHeic2Any() {
+  if (!heic2anyPromise) {
+    heic2anyPromise = import('heic2any').then(mod => mod.default ?? mod);
+  }
+  return heic2anyPromise;
+}
+
 async function convertHeicToJpeg(file) {
   try {
+    if (DEV_LOGS) {
+      console.info('[upload] HEIC input', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      });
+    }
+    const heic2any = await getHeic2Any();
     const converted = await heic2any({
       blob: file,
       toType: 'image/jpeg',
@@ -106,6 +123,64 @@ async function loadImage(file) {
   });
 }
 
+async function decodeImage(file) {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(file);
+      if (DEV_LOGS) {
+        console.info('[upload] image decode success', {
+          method: 'createImageBitmap',
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          width: bitmap.width,
+          height: bitmap.height,
+        });
+      }
+      return { kind: 'bitmap', bitmap };
+    } catch (err) {
+      if (DEV_LOGS) {
+        console.info('[upload] image decode fallback', {
+          method: 'createImageBitmap',
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          error: err?.message ?? String(err),
+        });
+      }
+    }
+  }
+
+  const img = await loadImage(file);
+  if (!img) return null;
+  if (DEV_LOGS) {
+    console.info('[upload] image decode success', {
+      method: 'img.onload',
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      width: img.width,
+      height: img.height,
+    });
+  }
+  return { kind: 'image', image: img };
+}
+
+async function canvasToBlob(canvas, type = 'image/jpeg', quality = 0.84) {
+  if (canvas.toBlob) {
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, type, quality));
+    if (blob) return blob;
+  }
+
+  try {
+    const dataUrl = canvas.toDataURL(type, quality);
+    const blob = await fetch(dataUrl).then(r => r.blob());
+    return blob;
+  } catch {
+    return null;
+  }
+}
+
 function blurScoreFromCanvas(canvas) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -128,15 +203,31 @@ function blurScoreFromCanvas(canvas) {
 
 async function compressImage(file) {
   const normalizedFile = await normalizeImageFile(file);
-  const img = await loadImage(normalizedFile);
-  if (!img) throw new Error('Could not load image.');
+  if (DEV_LOGS) {
+    console.info('[upload] image preprocess', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      normalizedType: normalizedFile.type,
+      normalizedSize: normalizedFile.size,
+    });
+  }
+  const decoded = await decodeImage(normalizedFile);
+  if (!decoded) throw new Error('Could not load image.');
+  const width = decoded.kind === 'bitmap' ? decoded.bitmap.width : decoded.image.width;
+  const height = decoded.kind === 'bitmap' ? decoded.bitmap.height : decoded.image.height;
   const MAX = 1800;
-  const ratio = Math.min(1, MAX / Math.max(img.width, img.height));
+  const ratio = Math.min(1, MAX / Math.max(width, height));
   const canvas = document.createElement('canvas');
-  canvas.width  = Math.max(1, Math.round(img.width * ratio));
-  canvas.height = Math.max(1, Math.round(img.height * ratio));
+  canvas.width  = Math.max(1, Math.round(width * ratio));
+  canvas.height = Math.max(1, Math.round(height * ratio));
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  if (decoded.kind === 'bitmap') {
+    ctx.drawImage(decoded.bitmap, 0, 0, canvas.width, canvas.height);
+    decoded.bitmap.close?.();
+  } else {
+    ctx.drawImage(decoded.image, 0, 0, canvas.width, canvas.height);
+  }
   const previewCanvas = document.createElement('canvas');
   const previewMax = 72;
   const previewRatio = Math.min(1, previewMax / Math.max(canvas.width, canvas.height));
@@ -144,8 +235,16 @@ async function compressImage(file) {
   previewCanvas.height = Math.max(1, Math.round(canvas.height * previewRatio));
   previewCanvas.getContext('2d').drawImage(canvas, 0, 0, previewCanvas.width, previewCanvas.height);
   const blurScore = blurScoreFromCanvas(previewCanvas);
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.84));
+  const blob = await canvasToBlob(canvas, 'image/jpeg', 0.84);
   if (!blob) throw new Error('Could not process image.');
+  if (DEV_LOGS) {
+    console.info('[upload] canvas export success', {
+      name: file.name,
+      outputType: blob.type,
+      outputSize: blob.size,
+      blurScore: Math.round(blurScore),
+    });
+  }
   return { blob, blurScore };
 }
 
@@ -160,14 +259,32 @@ async function blobToBase64(blob) {
 
 async function ocrImageBlob(blob, token) {
   const base64 = await blobToBase64(blob);
-  const res = await fetch('/api/ocr', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ image: base64, mediaType: 'image/jpeg' }),
-  });
+  if (DEV_LOGS) {
+    console.info('[upload] OCR request', {
+      mime: blob.type,
+      base64Size: base64.length,
+    });
+  }
+  const body = JSON.stringify({ image: base64, mediaType: 'image/jpeg' });
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+
+  let res = await fetch('/api/ocr', { method: 'POST', headers, body });
+
+  // In local dev, a stale or missing Vite proxy can surface as a 404 on 5173.
+  // Fall back directly to the Express server so OCR still works while keeping
+  // production on the normal relative API path.
+  if (import.meta.env.DEV && res.status === 404 && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    if (DEV_LOGS) {
+      console.info('[upload] OCR proxy fallback', {
+        path: '/api/ocr',
+        fallback: 'http://localhost:3001/api/ocr',
+      });
+    }
+    res = await fetch('http://localhost:3001/api/ocr', { method: 'POST', headers, body });
+  }
 
   let payload = null;
   try { payload = await res.json(); } catch { payload = null; }
@@ -216,6 +333,14 @@ async function processFile(file, token) {
   }
 
   if (isImage) {
+    if (DEV_LOGS) {
+      console.info('[upload] process image file', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        ext,
+      });
+    }
     const { blob, blurScore } = await compressImage(file);
     const text = await ocrImageBlob(blob, token);
     if (text.length < MIN_VALID_TEXT) {
@@ -343,6 +468,7 @@ export default function HomeView({
   furigana, setFurigana,
   isJapanese,
   onUpgrade,
+  onManageBilling,
   onOpenPricing,
   onOpenPrivacy,
   onOpenTerms,
@@ -709,6 +835,7 @@ export default function HomeView({
           setAdminModel={setAdminModel}
           onToggleSelfPro={handleToggleSelfPro}
           onUpgrade={onUpgrade}
+          onManageBilling={onManageBilling}
           onOpenPricing={onOpenPricing}
           onOpenPrivacy={onOpenPrivacy}
           onOpenTerms={onOpenTerms}

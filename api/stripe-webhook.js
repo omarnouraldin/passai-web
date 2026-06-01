@@ -44,7 +44,19 @@ async function syncSubscription({ supabaseServiceClient, userId, customerId, sub
     current_period_end: currentPeriodEnd,
   }, { onConflict: 'id' });
 
-  if (error) throw error;
+  if (error) {
+    console.error('[stripe-webhook] Supabase upsert failed', {
+      userId,
+      customerId: customerId ?? subscription.customer ?? null,
+      subscriptionId: subscription.id ?? null,
+      status,
+      error: error.message,
+      details: error.details ?? null,
+      hint: error.hint ?? null,
+      code: error.code ?? null,
+    });
+    throw error;
+  }
 }
 
 async function handleEvent(stripe, supabaseServiceClient, event) {
@@ -52,8 +64,24 @@ async function handleEvent(stripe, supabaseServiceClient, event) {
     const session = event.data.object;
     const userId = session.metadata?.supabase_user_id ?? null;
     const subscriptionId = session.subscription ?? null;
+    console.info('[stripe-webhook] checkout.session.completed', {
+      hasSupabaseUserId: !!userId,
+      hasSubscriptionId: !!subscriptionId,
+    });
     if (!userId || !subscriptionId) return;
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    let subscription;
+    try {
+      subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    } catch (err) {
+      console.error('[stripe-webhook] Stripe subscription retrieve failed', {
+        subscriptionId,
+        userId,
+        message: err?.message ?? String(err),
+        type: err?.type ?? null,
+        code: err?.code ?? null,
+      });
+      throw err;
+    }
     await syncSubscription({
       supabaseServiceClient,
       userId,
@@ -70,6 +98,11 @@ async function handleEvent(stripe, supabaseServiceClient, event) {
   ) {
     const subscription = event.data.object;
     const userId = subscription.metadata?.supabase_user_id ?? null;
+    console.info('[stripe-webhook] subscription event', {
+      eventType: event.type,
+      hasSupabaseUserId: !!userId,
+      subscriptionId: subscription.id ?? null,
+    });
     if (!userId) return;
     await syncSubscription({
       supabaseServiceClient,
@@ -86,6 +119,12 @@ export default async function handler(req, res) {
   if (!limited.allowed) return rateLimitResponse(res, 'webhook', limited.retryAfterSeconds);
 
   const { supabaseUrl, supabaseService, stripeSecret, webhookSecret } = getEnv();
+  console.info('[stripe-webhook] env presence', {
+    hasSupabaseUrl: !!supabaseUrl,
+    hasSupabaseService: !!supabaseService,
+    hasStripeSecret: !!stripeSecret,
+    hasWebhookSecret: !!webhookSecret,
+  });
   if (!supabaseUrl || !supabaseService || !stripeSecret || !webhookSecret) {
     return res.status(500).send('Webhook not configured');
   }
@@ -97,6 +136,9 @@ export default async function handler(req, res) {
   try {
     const signature = req.headers['stripe-signature'];
     event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+    console.info('[stripe-webhook] signature verified', {
+      eventType: event.type,
+    });
   } catch (err) {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }

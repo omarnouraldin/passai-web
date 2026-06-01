@@ -990,6 +990,11 @@ html, body, #root {
   line-height: 1.62;
   margin-bottom: 16px;
   color: var(--text);
+  white-space: normal;
+  overflow: visible;
+  text-overflow: initial;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .quiz-option {
   width: 100%;
@@ -1492,43 +1497,46 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
-  line-height: 1.58;
+  line-height: 1.72;
 }
 
 .ruby-inline {
   ruby-position: over;
   ruby-align: center;
   white-space: normal;
-  line-height: 1.02;
+  line-height: 1.28;
   vertical-align: baseline;
   max-width: 100%;
   min-width: 0;
   overflow: visible;
+  padding-top: 0.18em;
 }
 
 .ruby-rt {
-  font-size: 0.44em;
-  line-height: 1;
-  color: rgba(94, 94, 114, 0.58);
-  font-weight: 500;
+  font-size: 0.56em;
+  line-height: 1.08;
+  color: rgba(214, 210, 232, 0.92);
+  font-weight: 700;
   white-space: normal;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
   max-width: 100%;
   min-width: 0;
   overflow-wrap: anywhere;
   word-break: break-word;
   text-align: center;
   vertical-align: top;
+  padding-bottom: 0.12em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
 }
 
 @media (max-width: 480px) {
   .ruby-inline {
-    line-height: 1;
+    line-height: 1.22;
   }
   .ruby-rt {
-    font-size: 0.41em;
-    line-height: 1;
-    color: rgba(94, 94, 114, 0.56);
+    font-size: 0.52em;
+    line-height: 1.06;
+    color: rgba(214, 210, 232, 0.9);
   }
 
   .summary-text,
@@ -2522,6 +2530,15 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
 
 .quiz-question-text {
   line-height: 1.76;
+}
+
+.exam-review-question {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: initial;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  line-height: 1.74;
 }
 
 .quiz-option {

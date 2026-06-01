@@ -198,6 +198,15 @@ function ExplanationText({ text, furigana }) {
 // ── Main component ────────────────────────────────────────────────────────────
 export default function SimpleTab({ summary, highlightStat, simpleExplanation, thinkingQuestions, corrections, illustrationQuery, furigana, isJapanese }) {
   // Image fetch removed — decorative images break reading flow
+  const hasMeaningfulHighlightStat = !!(
+    highlightStat &&
+    typeof highlightStat === 'object' &&
+    String(highlightStat.label ?? '').trim() &&
+    String(highlightStat.from ?? '').trim() &&
+    String(highlightStat.to ?? '').trim() &&
+    String(highlightStat.magnitude ?? '').trim() &&
+    String(highlightStat.from).trim() !== String(highlightStat.to).trim()
+  );
 
   const hasCorrections       = corrections?.length > 0;
   const hasThinkingQuestions = thinkingQuestions?.length > 0;
@@ -232,9 +241,9 @@ export default function SimpleTab({ summary, highlightStat, simpleExplanation, t
         <div style={{
           background: 'linear-gradient(135deg, rgba(107,96,255,0.13), rgba(10,132,255,0.10))',
           border: '1px solid rgba(107,96,255,0.28)',
-          borderRadius: highlightStat ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)',
+          borderRadius: hasMeaningfulHighlightStat ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)',
           padding: '20px 22px',
-          marginBottom: highlightStat ? 0 : 28,
+          marginBottom: hasMeaningfulHighlightStat ? 0 : 28,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <span style={{ fontSize: 15 }}>⚡</span>
@@ -247,7 +256,7 @@ export default function SimpleTab({ summary, highlightStat, simpleExplanation, t
       )}
 
       {/* ── 💥 Highlight stat ──────────────────────────────────────── */}
-      {highlightStat && (
+      {hasMeaningfulHighlightStat && (
         <div style={{
           background: 'rgba(255,55,95,0.07)',
           border: '1px solid rgba(107,96,255,0.28)',

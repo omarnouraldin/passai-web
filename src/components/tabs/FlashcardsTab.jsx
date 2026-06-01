@@ -78,6 +78,7 @@ export default function FlashcardsTab({ cards, furigana, isJapanese, contentId }
   });
   const [idx,      setIdx]      = useState(0);
   const [retrying, setRetrying] = useState(false);
+  const [retryIndices, setRetryIndices] = useState([]);
 
   // Persist verdicts whenever they change
   useEffect(() => {
@@ -88,7 +89,7 @@ export default function FlashcardsTab({ cards, furigana, isJapanese, contentId }
   if (!cards?.length) return null;
 
   const activeCards = retrying
-    ? cards.map((c, i) => ({ ...c, _origIdx: i })).filter(c => verdicts[c._origIdx] === 'skip')
+    ? retryIndices.map(i => ({ ...cards[i], _origIdx: i })).filter(Boolean)
     : cards.map((c, i) => ({ ...c, _origIdx: i }));
 
   const currentCard = activeCards[Math.min(idx, activeCards.length - 1)];
@@ -97,15 +98,26 @@ export default function FlashcardsTab({ cards, furigana, isJapanese, contentId }
   const allAnswered = activeCards.length > 0 && activeCards.every(c => verdicts[c._origIdx] !== undefined);
 
   function handleVerdict(cardIndex, v) {
+    if (retrying) {
+      setRetryIndices(prev => (
+        v === 'know'
+          ? prev.filter(i => i !== cardIndex)
+          : prev.includes(cardIndex) ? prev : [...prev, cardIndex]
+      ));
+    }
     setVerdicts(prev => ({ ...prev, [cardIndex]: v }));
     setTimeout(() => setIdx(i => Math.min(i + 1, activeCards.length - 1)), 400);
   }
 
   function startRetry() {
+    const skipped = cards
+      .map((_, i) => i)
+      .filter(i => verdicts[i] === 'skip');
+    setRetryIndices(skipped);
     setIdx(0);
     setVerdicts(prev => {
       const next = { ...prev };
-      Object.keys(next).forEach(k => { if (next[k] === 'skip') delete next[k]; });
+      skipped.forEach(i => { delete next[i]; });
       return next;
     });
     setRetrying(true);
@@ -115,8 +127,19 @@ export default function FlashcardsTab({ cards, furigana, isJapanese, contentId }
     setIdx(0);
     setVerdicts({});
     setRetrying(false);
+    setRetryIndices([]);
     if (storageKey) localStorage.removeItem(storageKey);
   }
+
+  useEffect(() => {
+    if (!retrying) return;
+    if (retryIndices.length === 0) {
+      setRetrying(false);
+      setIdx(0);
+      return;
+    }
+    setIdx(prev => Math.min(prev, retryIndices.length - 1));
+  }, [retryIndices, retrying]);
 
   return (
     <div>

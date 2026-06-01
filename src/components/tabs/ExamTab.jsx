@@ -21,6 +21,20 @@ function gradeLabel(pct, isJapanese) {
   return isJapanese ? '要復習 📚' : 'Needs Review 📚';
 }
 
+function shortAnswerGuidance(question, isJapanese) {
+  const text = String(question ?? '').trim();
+  const asksWhyOrHow = /なぜ|どうして|どのように|説明|compare|explain|why|how|describe|discuss/i.test(text);
+  const asksListOrName = /何|どれ|挙げ|name|list|which|who|when|where|define/i.test(text);
+
+  if (asksWhyOrHow || text.length > 55) {
+    return isJapanese ? '2〜3文で答えてください。AIが採点します。' : 'Answer in 2–3 sentences. AI will grade your response.';
+  }
+  if (asksListOrName || text.length < 32) {
+    return isJapanese ? '1文で短く答えても大丈夫です。必要なら2文でもOKです。' : 'A short 1-sentence answer is fine here. Use 2 if needed.';
+  }
+  return isJapanese ? '1〜2文で答えてください。AIが採点します。' : 'Answer in 1–2 sentences. AI will grade your response.';
+}
+
 function getStorageKey(contentId) {
   return `${EXAM_STORAGE_PREFIX}:${contentId ?? 'default'}`;
 }
@@ -488,7 +502,7 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
           const correct = userChoice === q.correctIndex;
           return (
             <div key={i} style={{ marginBottom: 20, padding: '14px', background: 'var(--card)', borderRadius: 10, border: `1.5px solid ${correct ? 'rgba(48,209,88,0.3)' : 'rgba(255,69,58,0.3)'}` }}>
-              <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>
+              <div className="exam-review-question" style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>
                 {correct ? '✅' : '❌'} Q{i + 1}. <FuriganaText text={q.question} furigana={furigana} />
               </div>
               <div style={{ fontSize: 13, color: 'var(--muted)' }}>
@@ -510,7 +524,7 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
           const ev = results.evaluations[i];
           return (
             <div key={i} style={{ marginBottom: 20, padding: '14px', background: 'var(--card)', borderRadius: 10, border: '1px solid var(--border)' }}>
-              <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>Q{i + 1}. <FuriganaText text={q.question} furigana={furigana} /></div>
+              <div className="exam-review-question" style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>Q{i + 1}. <FuriganaText text={q.question} furigana={furigana} /></div>
               <div style={{ fontSize: 13, background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '8px 10px', marginBottom: 8, color: 'var(--muted)' }}>
                 {isJapanese ? 'あなたの回答: ' : 'Your answer: '}{saAnswers[i] || '—'}
               </div>
@@ -533,7 +547,7 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
           const correct = fbAnswers[i].trim().toLowerCase() === q.answer.toLowerCase();
           return (
             <div key={i} style={{ marginBottom: 16, padding: '14px', background: 'var(--card)', borderRadius: 10, border: `1.5px solid ${correct ? 'rgba(48,209,88,0.3)' : 'rgba(255,69,58,0.3)'}` }}>
-              <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 14 }}>{correct ? '✅' : '❌'} {q.sentence.replace('___', `[${q.answer}]`)}</div>
+              <div className="exam-review-question" style={{ fontWeight: 600, marginBottom: 6, fontSize: 14 }}>{correct ? '✅' : '❌'} {q.sentence.replace('___', `[${q.answer}]`)}</div>
               {!correct && <div style={{ fontSize: 13, color: 'var(--danger)' }}>{isJapanese ? 'あなた: ' : 'You wrote: '}{fbAnswers[i] || '—'}</div>}
             </div>
           );
@@ -596,14 +610,14 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
 
       {/* ── Section 2: Short Answer ────────────────────────────────────── */}
       <div className="section-title" style={{ marginTop: 8 }}>{isJapanese ? '第2部：短答式問題' : 'Part 2: Short Answer'}</div>
-      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-        {isJapanese ? '2〜3文で答えてください。AIが採点します。' : 'Answer in 2–3 sentences. Claude will grade your response.'}
-      </div>
       {examData.shortAnswer.map((q, i) => (
         <div key={i} style={{ marginBottom: 24 }}>
           <div className="quiz-question-text">
             <span style={{ color: 'var(--accent)', marginRight: 8 }}>Q{i + 1}.</span>
             <FuriganaText text={q.question} furigana={furigana} />
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
+            {shortAnswerGuidance(q.question, isJapanese)}
           </div>
           <textarea
             value={saAnswers[i]}

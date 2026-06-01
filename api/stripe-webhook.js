@@ -64,10 +64,6 @@ async function handleEvent(stripe, supabaseServiceClient, event) {
     const session = event.data.object;
     const userId = session.metadata?.supabase_user_id ?? null;
     const subscriptionId = session.subscription ?? null;
-    console.info('[stripe-webhook] checkout.session.completed', {
-      hasSupabaseUserId: !!userId,
-      hasSubscriptionId: !!subscriptionId,
-    });
     if (!userId || !subscriptionId) return;
     let subscription;
     try {
@@ -98,11 +94,6 @@ async function handleEvent(stripe, supabaseServiceClient, event) {
   ) {
     const subscription = event.data.object;
     const userId = subscription.metadata?.supabase_user_id ?? null;
-    console.info('[stripe-webhook] subscription event', {
-      eventType: event.type,
-      hasSupabaseUserId: !!userId,
-      subscriptionId: subscription.id ?? null,
-    });
     if (!userId) return;
     await syncSubscription({
       supabaseServiceClient,
@@ -119,12 +110,6 @@ export default async function handler(req, res) {
   if (!limited.allowed) return rateLimitResponse(res, 'webhook', limited.retryAfterSeconds);
 
   const { supabaseUrl, supabaseService, stripeSecret, webhookSecret } = getEnv();
-  console.info('[stripe-webhook] env presence', {
-    hasSupabaseUrl: !!supabaseUrl,
-    hasSupabaseService: !!supabaseService,
-    hasStripeSecret: !!stripeSecret,
-    hasWebhookSecret: !!webhookSecret,
-  });
   if (!supabaseUrl || !supabaseService || !stripeSecret || !webhookSecret) {
     return res.status(500).send('Webhook not configured');
   }
@@ -136,10 +121,10 @@ export default async function handler(req, res) {
   try {
     const signature = req.headers['stripe-signature'];
     event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-    console.info('[stripe-webhook] signature verified', {
-      eventType: event.type,
-    });
   } catch (err) {
+    console.error('[stripe-webhook] Signature verification failed', {
+      message: err?.message ?? String(err),
+    });
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 

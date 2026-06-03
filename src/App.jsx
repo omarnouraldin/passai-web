@@ -69,6 +69,7 @@ function AppInner() {
   const [abortCtrl,     setAbortCtrl]   = useState(null);
   const [upgradeData,   setUpgradeData] = useState(null); // { used, limit, resetAt }
   const [showAuth,      setShowAuth]    = useState(false);
+  const [profileOpenSignal, setProfileOpenSignal] = useState(0);
   const [page,          setPage]        = useState(() => (
     typeof window === 'undefined' ? 'landing' : pathToPage(window.location.pathname)
   ));
@@ -240,6 +241,8 @@ function AppInner() {
       }
 
       if (!data) throw new Error('No result received');
+      setProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 320));
 
       const snippetSource = fileData?.text ?? noteText ?? '';
       const item = {
@@ -273,6 +276,10 @@ function AppInner() {
   }
 
   function openHistoryItem(item) {
+    if (!item) {
+      setView('history');
+      return;
+    }
     setGenerated(item.content);
     setContentId(item.id);
     setView('results');
@@ -316,6 +323,11 @@ function AppInner() {
 
   function openPricing() {
     navigateTo('pricing');
+  }
+
+  function openProfileFromNav() {
+    setView('home');
+    setProfileOpenSignal(v => v + 1);
   }
 
   useEffect(() => {
@@ -461,6 +473,9 @@ function AppInner() {
           isJapanese={isJapanese}
           onUpgrade={startCheckout}
           onManageBilling={openBillingPortal}
+          recentHistory={history}
+          onOpenHistoryItem={openHistoryItem}
+          profileOpenSignal={profileOpenSignal}
           onOpenPricing={openPricing}
           onOpenPrivacy={() => navigateTo('privacy')}
           onOpenTerms={() => navigateTo('terms')}
@@ -489,7 +504,7 @@ function AppInner() {
       )}
 
       {user && (
-        <nav className="bottom-nav">
+        <nav className="bottom-nav bottom-nav-three">
           <button
             className={`nav-tab ${view !== 'history' ? 'active' : ''}`}
             onClick={() => setView('home')}
@@ -507,6 +522,15 @@ function AppInner() {
               <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
             </svg>
             {isJapanese ? '履歴' : 'History'}
+          </button>
+          <button
+            className="nav-tab"
+            onClick={openProfileFromNav}
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-4.33 0-8 2.17-8 5v1h16v-1c0-2.83-3.67-5-8-5z"/>
+            </svg>
+            {isJapanese ? 'プロフィール' : 'Profile'}
           </button>
         </nav>
       )}

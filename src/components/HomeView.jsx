@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 import SettingsModal from './SettingsModal.jsx';
@@ -469,6 +469,9 @@ export default function HomeView({
   isJapanese,
   onUpgrade,
   onManageBilling,
+  recentHistory = [],
+  onOpenHistoryItem,
+  profileOpenSignal = 0,
   onOpenPricing,
   onOpenPrivacy,
   onOpenTerms,
@@ -489,6 +492,8 @@ export default function HomeView({
 
   const fileRef   = useRef(null);
   const cameraRef = useRef(null);
+  const uploadSectionRef = useRef(null);
+  const noteAreaRef = useRef(null);
 
   // Require login when Supabase is configured
   const requiresAuth = enabled && !user;
@@ -630,6 +635,11 @@ export default function HomeView({
   const trimmedUploadText = buildMergedText();
   const tooMuchText = trimmedUploadText.length >= charLimit && (noteText.trim().length > 0 || hasReadyFiles);
 
+  useEffect(() => {
+    if (!profileOpenSignal) return;
+    setShowSettings(true);
+  }, [profileOpenSignal]);
+
   function uploadMessage() {
     if (!uploadedFiles.length) return isJapanese
       ? 'PDF、画像、スクリーンショット、テキストを複数まとめて追加できます。'
@@ -663,6 +673,25 @@ export default function HomeView({
     });
   }
 
+  function focusUploadArea() {
+    uploadSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function triggerFilePicker() {
+    focusUploadArea();
+    fileRef.current?.click();
+  }
+
+  function triggerCameraPicker() {
+    focusUploadArea();
+    cameraRef.current?.click();
+  }
+
+  function focusTextInput() {
+    focusUploadArea();
+    window.setTimeout(() => noteAreaRef.current?.focus(), 160);
+  }
+
   return (
     <>
       <div className="page">
@@ -672,13 +701,18 @@ export default function HomeView({
           <div className="brand-orb">
               <img src={brand.iconPath} alt={brand.full} className="mascot-icon" />
             </div>
-            <div>
+            <div className="header-brand-block">
               <div className="logo header-wordmark">
                 <span className="logo-pass">{brand.lead}</span>
                 <span className="logo-ai">{brand.suffix}</span>
               </div>
-              <div className="tagline">
-                {isJapanese ? 'ノートをAIで学習素材に変換' : getBrandTagline(false)}
+              <div className="header-meta-row">
+                <div className="tagline">
+                  {isJapanese ? 'ノートをAIで学習素材に変換' : getBrandTagline(false)}
+                </div>
+                <div className={`home-status-pill ${isPro ? 'pro' : 'free'}`}>
+                  {isPro ? 'PRO' : 'FREE'}
+                </div>
               </div>
             </div>
           </div>
@@ -696,25 +730,57 @@ export default function HomeView({
         ) : (
           <>
         <div className="study-hero-card">
-          <div>
-            <div className="study-hero-kicker">{isJapanese ? '次のテスト準備を始めよう' : 'Ready for your next exam?'}</div>
-            <div className="study-hero-title">{isJapanese ? 'アップロードして開始' : 'Upload to get started'}</div>
+          <div className="study-hero-content">
+            <div className="study-hero-kicker">{isJapanese ? 'ノートをすばやく学習パック化' : 'Turn notes into an exam-ready pack'}</div>
+            <div className="study-hero-title">{isJapanese ? 'PassAIで静かに、深く学ぶ' : 'Study calmly, pass faster'}</div>
             <div className="study-hero-sub">
               {isJapanese
-                ? 'PDF・写真・テキストから、要約とクイズをすばやく作成します。'
-                : 'Turn PDFs, images, and text notes into clean study material.'}
+                ? 'PDF・画像・テキストをまとめて読み込み、要約・カード・クイズを見やすく整えます。'
+                : 'Upload PDFs, images, or text and get clear summaries, flashcards, and quiz-ready study material.'}
             </div>
+            <button className="btn btn-primary home-primary-cta" onClick={focusUploadArea}>
+              {isJapanese ? 'アップロードを始める' : 'Start upload'}
+            </button>
           </div>
           <img src="/mascot/mascot-reading.png" alt="" className="study-hero-mascot" />
         </div>
 
         <div
+          ref={uploadSectionRef}
           className={`upload-dropzone ${dragActive ? 'active' : ''}`}
           onDragEnter={handleDragEnter}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
+          <div className="upload-main-header">
+            <div className="upload-main-icon">⬆</div>
+            <div>
+              <div className="upload-main-title">{isJapanese ? 'ノートをアップロード' : 'Upload your notes'}</div>
+              <div className="upload-main-sub">
+                {isJapanese ? 'PDF・画像・テキストを読み込んで学習パックを生成します。' : 'Add PDFs, images, or text to generate a study pack.'}
+              </div>
+            </div>
+          </div>
+
+          <div className="upload-method-grid">
+            <button type="button" className="upload-method-card" onClick={triggerFilePicker}>
+              <div className="upload-method-badge">PDF</div>
+              <div className="upload-method-title">{isJapanese ? 'PDFファイル' : 'PDF files'}</div>
+              <div className="upload-method-copy">{isJapanese ? '講義資料や配布プリント向け' : 'For lecture slides and handouts'}</div>
+            </button>
+            <button type="button" className="upload-method-card" onClick={triggerCameraPicker}>
+              <div className="upload-method-badge">IMG</div>
+              <div className="upload-method-title">{isJapanese ? '画像 / 写真' : 'Images / photos'}</div>
+              <div className="upload-method-copy">{isJapanese ? '板書やノート写真をOCR' : 'OCR your notebook and screenshots'}</div>
+            </button>
+            <button type="button" className="upload-method-card" onClick={focusTextInput}>
+              <div className="upload-method-badge">TXT</div>
+              <div className="upload-method-title">{isJapanese ? 'テキスト入力' : 'Paste text'}</div>
+              <div className="upload-method-copy">{isJapanese ? '短いメモや要点整理に最適' : 'Best for quick notes and outlines'}</div>
+            </button>
+          </div>
+
           <div className="upload-row">
             <label
               className="import-btn"
@@ -753,10 +819,12 @@ export default function HomeView({
 
           <div className="upload-hint upload-hint-stack">
             <div className="upload-hint-title">
-              {isJapanese ? 'アップロード' : 'Upload'}
+              {isJapanese ? '対応ファイル' : 'Supported files'}
             </div>
             <div className="upload-hint-copy">
-              {uploadMessage()}
+              {isJapanese
+                ? 'PDF / DOCX / TXT / 画像 / HEIC に対応。ドラッグ＆ドロップも使えます。'
+                : 'PDF / DOCX / TXT / images / HEIC supported. Drag and drop also works.'}
             </div>
           </div>
 
@@ -781,6 +849,7 @@ export default function HomeView({
         {/* Textarea stays available for manual notes */}
         <div className="note-area-wrap" style={{ marginBottom: 16, marginTop: 16 }}>
           <textarea
+            ref={noteAreaRef}
             className="note-area"
             placeholder={isJapanese
               ? 'ここにノートを入力または貼り付けてください...'
@@ -793,6 +862,15 @@ export default function HomeView({
             {count.toLocaleString()} / {charLimit.toLocaleString()}
           </span>
         </div>
+
+            <div className="privacy-note-card">
+              <div className="privacy-note-title">{isJapanese ? '保護された学習フロー' : 'Protected study flow'}</div>
+              <div className="privacy-note-copy">
+                {isJapanese
+                  ? 'アップロードした内容は学習素材の生成に使われます。機密情報は避け、送信前に内容を確認してください。'
+                  : 'Uploaded material is used to generate study content. Avoid sensitive data and review files before sending.'}
+              </div>
+            </div>
 
             {/* Usage indicator — free users only */}
             {user && !isPro && (
@@ -818,12 +896,51 @@ export default function HomeView({
             )}
 
             <button
-              className="btn btn-primary"
+              className="btn btn-primary generate-pack-btn"
               disabled={!canGenerate || overLimit}
               onClick={handleGenerate}
             >
-              ✨ {isJapanese ? '生成する' : 'Generate study material'}
+              ✨ {isJapanese ? '学習パックを生成する' : 'Generate Study Pack'}
             </button>
+
+            {recentHistory.length > 0 && (
+              <div className="home-section-block">
+                <div className="home-section-head">
+                  <div className="home-section-title">{isJapanese ? '最近のノート' : 'Recent notes'}</div>
+                  <button className="home-section-link" onClick={() => onOpenHistoryItem?.(null)}>
+                    {isJapanese ? '履歴を見る' : 'View history'}
+                  </button>
+                </div>
+                <div className="home-recent-list">
+                  {recentHistory.slice(0, 3).map(item => (
+                    <button key={item.id} className="home-recent-card" onClick={() => onOpenHistoryItem?.(item)}>
+                      <div className="home-recent-icon">{item.snippet === '📷 Image' ? '🖼' : '📝'}</div>
+                      <div className="home-recent-body">
+                        <div className="home-recent-title">{item.snippet || (isJapanese ? '学習ノート' : 'Study note')}</div>
+                        <div className="home-recent-meta">
+                          {new Date(item.date).toLocaleDateString(isJapanese ? 'ja-JP' : 'en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+                      </div>
+                      <div className="home-recent-arrow">›</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!isPro && (
+              <div className="home-upgrade-card">
+                <div className="home-upgrade-copy">
+                  <div className="home-upgrade-kicker">👑 PassAI Pro</div>
+                  <div className="home-upgrade-title">
+                    {isJapanese ? '試験モードと強いAIで、毎日の復習をもっと深く。' : 'Unlock Exam Mode and stronger AI for daily revision.'}
+                  </div>
+                </div>
+                <button className="btn btn-primary home-upgrade-btn" onClick={onUpgrade}>
+                  {isJapanese ? 'Proを見る' : 'Upgrade to Pro'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

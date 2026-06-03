@@ -2,15 +2,15 @@ import { getBrandWordmark, getBrandTagline } from '../lib/branding.js';
 
 const COPY = {
   en: {
-    title: 'Simple plans for serious study',
-    body: 'Start free, then upgrade when you want higher limits, stronger models, and exam mode.',
+    title: 'Clear plans for serious study',
+    body: 'Start free, then upgrade when you want higher limits, stronger models, and Exam Mode.',
     back: 'Back',
     free: 'Free',
     freePrice: '5 generations/month',
     freeNote: 'For casual study sessions and quick revision.',
     pro: 'Pro',
     proPrice: '¥800/month',
-    proNote: 'Built for heavy study use and deeper explanations.',
+    proNote: 'Built for heavier study use and deeper explanations.',
     startFree: 'Start Free',
     upgrade: 'Upgrade to Pro',
     current: 'Current plan',
@@ -24,13 +24,13 @@ const COPY = {
       'Basic OCR / upload support',
     ],
     proBullets: [
-      'Higher limit for heavy study',
+      'Higher limit for heavier study',
       'Stronger model quality',
       'Exam mode and richer explanations',
     ],
   },
   ja: {
-    title: '学習にちょうどいい、シンプルなプラン',
+    title: '学習にちょうどいい、わかりやすいプラン',
     body: 'まずは無料で試して、必要になったら上限アップと試験モードを使えます。',
     back: '戻る',
     free: 'Free',

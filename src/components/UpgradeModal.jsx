@@ -51,8 +51,8 @@ export default function UpgradeModal({
             </div>
             <div className="upgrade-modal-subtitle">
               {isJapanese
-                ? `無料プランは月${limit}回まで。Proなら、もっと多くの学習 सामग्रीを、より強いAIで作れます。`
-                : `Free includes ${limit} generations per month. Upgrade to Pro for unlimited study material, stronger AI explanations, and Exam Mode.`}
+                ? `無料プランは月${limit}回まで。Proなら、より多くの学習素材と試験モードが使えます。`
+                : `Free includes ${limit} generations per month. Upgrade to Pro for more study material, stronger AI explanations, and Exam Mode.`}
             </div>
           </div>
         </div>

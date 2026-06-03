@@ -125,21 +125,21 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
 
   const loadingStages = useMemo(() => (
     isJapanese
-      ? ['試験素材を読む', '出題候補を見つける', '多肢選択を作る', '短答式を作る', '仕上げ中']
-      : ['Reading your study material', 'Finding likely exam topics', 'Writing multiple-choice questions', 'Creating short-answer questions', 'Finalizing your exam']
+      ? ['ノートを読み込んでいます', '内容を理解しています', 'テストに出るポイントを予測中', 'フラッシュカードを作成中', 'クイズを生成中', '仕上げています']
+      : ['Reading your notes', 'Understanding the content', 'Predicting likely test points', 'Creating flashcards', 'Generating quiz questions', 'Finalizing your exam pack']
   ), [isJapanese]);
 
   const loadingTips = useMemo(() => (
     isJapanese
       ? [
-          '少し長くかかっても、試験は続いています。',
-          '問題数が多いほど、少し時間がかかることがあります。',
-          '生成が終わるまで、この画面でお待ちください。',
+          'AI が学習内容を読み取って、試験パックへ整理しています。',
+          '内容が多いと少し長くかかることがありますが、処理は続いています。',
+          '問題を作るだけでなく、復習しやすい順序にも整えています。',
         ]
       : [
-          'This is still working — full exams take a bit longer than summaries.',
-          'More detailed notes can take a little extra time to turn into questions.',
-          'We’re building the exam step by step so the questions stay useful.',
+          'AI is organizing your notes into an exam pack.',
+          'Larger notes can take a little longer, but the process is still running.',
+          'We are building questions in a careful order so the pack stays useful.',
         ]
   ), [isJapanese]);
   const [tipIndex, setTipIndex] = useState(0);
@@ -219,22 +219,25 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
     }
 
     const stageForProgress = value => {
-      if (value <= 20) return 0;
-      if (value <= 40) return 1;
-      if (value <= 60) return 2;
-      if (value <= 85) return 3;
-      return 4;
+      if (value <= 16) return 0;
+      if (value <= 32) return 1;
+      if (value <= 48) return 2;
+      if (value <= 66) return 3;
+      if (value <= 84) return 4;
+      return 5;
     };
 
     const dotTimer = setInterval(() => setLoadingDots(d => d % 3 + 1), 450);
     const tipTimer = setInterval(() => setTipIndex(i => (i + 1) % loadingTips.length), 4500);
     const progressTimer = setInterval(() => {
       setDisplayProgress(prev => {
-        const next = Math.min(95, Math.max(prev, progress || 8) + 1);
+        const base = Math.max(prev, progress || 8, 8);
+        const cap = progress >= 90 ? 96 : progress >= 70 ? 90 : progress >= 40 ? 80 : 68;
+        const next = base >= cap ? base : Math.min(base + (base < 30 ? 2 : 1), cap);
         setLoadingStageIndex(stageForProgress(next));
         return next;
       });
-    }, 1200);
+    }, 700);
     const longRunningTimer = setTimeout(() => setShowLongRunning(true), 24000);
 
     return () => {
@@ -310,7 +313,7 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
               if (Number.isFinite(nextValue)) {
                 setProgress(nextValue);
                 setDisplayProgress(prev => Math.max(prev, nextValue));
-                setLoadingStageIndex(nextValue <= 20 ? 0 : nextValue <= 40 ? 1 : nextValue <= 60 ? 2 : nextValue <= 85 ? 3 : 4);
+                setLoadingStageIndex(nextValue <= 16 ? 0 : nextValue <= 32 ? 1 : nextValue <= 48 ? 2 : nextValue <= 66 ? 3 : nextValue <= 84 ? 4 : 5);
               }
             }
             if (event.type === 'result')   { data = event.data; break outer; }
@@ -326,6 +329,7 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
       setProgress(100);
       setDisplayProgress(100);
       setLoadingStageIndex(4);
+      await new Promise(resolve => setTimeout(resolve, 320));
       setExamState('ready');
     } catch (err) {
       setError(err.message);
@@ -433,32 +437,46 @@ export default function ExamTab({ originalInput, furigana, isJapanese, contentId
   // ── Generating state ────────────────────────────────────────────────────
   if (examState === 'generating') {
     return (
-      <div style={{ textAlign: 'center', padding: '48px 16px' }}>
-        <div style={{ fontSize: 40, marginBottom: 20 }}>⏳</div>
-        <div style={{ fontSize: 15, color: 'var(--muted)', marginBottom: 14 }}>
+      <div className="exam-loading-shell">
+        <div className="exam-loading-illustration">
+          <img src="/mascot/mascot-loading.png" alt="" className="exam-loading-mascot" />
+        </div>
+        <div className="exam-loading-note">
+          {isJapanese ? 'AI が試験パックを作成しています' : 'AI is creating your exam pack'}
+        </div>
+        <div className="exam-loading-title">
           {loadingStages[loadingStageIndex]}
-          <span style={{ display: 'inline-block', minWidth: 24 }}>{'.'.repeat(loadingDots)}</span>
+          <span className="exam-loading-dots">{'.'.repeat(loadingDots)}</span>
         </div>
-        <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
-          <div style={{
-            height: '100%', width: `${displayProgress}%`,
-            background: 'linear-gradient(90deg, #6b60ff, #a78bfa)',
-            borderRadius: 99, transition: 'width 0.3s ease-out',
-          }} />
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>{Math.round(displayProgress)}%</div>
-        <div style={{ marginTop: 16, display: 'grid', gap: 8, textAlign: 'left' }}>
-          {loadingStages.map((stage, index) => (
-            <div key={stage} style={{ display: 'flex', alignItems: 'center', gap: 8, color: index < loadingStageIndex ? 'var(--text)' : index === loadingStageIndex ? 'var(--accent)' : 'var(--muted)', fontSize: 12 }}>
-              <span style={{ width: 18, height: 18, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: index < loadingStageIndex ? 'rgba(48,209,88,0.14)' : index === loadingStageIndex ? 'rgba(107,96,255,0.18)' : 'rgba(255,255,255,0.05)', color: index < loadingStageIndex ? 'var(--color-green)' : index === loadingStageIndex ? 'var(--accent)' : 'var(--muted)', fontSize: 11, flexShrink: 0 }}>{index < loadingStageIndex ? '✓' : index + 1}</span>
-              <span>{stage}</span>
+        <div className="exam-loading-card">
+          <div className="exam-loading-progress-head">
+            <div className="exam-loading-progress-label">{isJapanese ? '進行状況' : 'Progress'}</div>
+            <div className="exam-loading-percent">{Math.round(displayProgress)}%</div>
+          </div>
+          <div className="exam-loading-progress-bar">
+            <div
+              className="exam-loading-progress-fill"
+              style={{ width: `${displayProgress}%` }}
+            />
+          </div>
+          <div className="exam-loading-stage-list">
+            {loadingStages.map((stage, index) => (
+              <div key={stage} className={`exam-loading-stage-item ${index < loadingStageIndex ? 'done' : index === loadingStageIndex ? 'active' : ''}`}>
+                <span className="exam-loading-stage-dot">{index < loadingStageIndex ? '✓' : index + 1}</span>
+                <span className="exam-loading-stage-text">{stage}</span>
+              </div>
+            ))}
+          </div>
+          <div className={`exam-loading-tip-card ${showLongRunning ? 'long' : ''}`}>
+            <div className="exam-loading-tip-label">
+              {showLongRunning ? (isJapanese ? '少し長めです' : 'Taking longer') : (isJapanese ? '進行中' : 'In progress')}
             </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 16, fontSize: 12, color: 'var(--muted)', minHeight: 18 }}>
-          {showLongRunning
-            ? (isJapanese ? '通常より少し長くかかっていますが、処理は続いています。' : 'This is taking longer than usual, but we’re still working.')
-            : loadingTips[tipIndex]}
+            <div className="exam-loading-tip-text">
+              {showLongRunning
+                ? (isJapanese ? '内容量が多いと少し長くなることがあります。処理は続いています。' : 'This can take longer with larger notes. Your request is still processing.')
+                : loadingTips[tipIndex]}
+            </div>
+          </div>
         </div>
       </div>
     );

@@ -3,31 +3,33 @@ import { getBrandWordmark } from '../lib/branding.js';
 
 const EN_STAGES = [
   'Reading your notes',
-  'Finding key topics',
-  'Building explanations',
-  'Creating quiz & flashcards',
-  'Finalizing',
+  'Understanding the content',
+  'Predicting likely test points',
+  'Creating flashcards',
+  'Generating quiz questions',
+  'Finalizing your study pack',
 ];
 const JA_STAGES = [
-  'ノートを読む',
-  'キートピックを見つける',
-  '解説を作る',
-  'クイズとカードを作成',
-  '仕上げ中',
+  'ノートを読み込んでいます',
+  '内容を理解しています',
+  'テストに出るポイントを予測中',
+  'フラッシュカードを作成中',
+  'クイズを生成中',
+  '仕上げています',
 ];
 
 const EN_TIPS = [
-  'Tip: Review flashcards once before opening the quiz.',
-  'Tip: If your PDF is blurry, upload screenshots of the clearest pages.',
-  'Tip: Use the quiz tab to find weak points faster.',
-  'Tip: Furigana helps with difficult terms, but focus on meaning first.',
+  'AI is organizing your study pack into a calmer format.',
+  'Longer notes can take a little more time, especially when they include many topics.',
+  'We are turning raw notes into summaries, flashcards, and quiz-ready material.',
+  'This wait is normal while the app reads, organizes, and checks your study content.',
 ];
 
 const JA_TIPS = [
-  'ヒント: クイズを開く前に、フラッシュカードを一度見直すと効果的です。',
-  'ヒント: PDF がぼやけるときは、見やすいページのスクリーンショットもおすすめです。',
-  'ヒント: クイズで苦手分野をすばやく見つけましょう。',
-  'ヒント: ふりがなは難しい語を読む助けです。まず意味に注目しましょう。',
+  'AI がノートを整理して、見返しやすい学習パックにまとめています。',
+  '内容が多いノートほど、少し長めにかかることがあります。',
+  '要約・フラッシュカード・クイズ用の内容を順番に整えています。',
+  '読み込み、整理、確認をしているので、この待ち時間は正常です。',
 ];
 
 export default function LoadingView({ isJapanese, progress = 0, onCancel }) {
@@ -44,10 +46,11 @@ export default function LoadingView({ isJapanese, progress = 0, onCancel }) {
   const tips = isJapanese ? JA_TIPS : EN_TIPS;
 
   const stageIdx =
-    displayProgress <= 20 ? 0 :
-    displayProgress <= 40 ? 1 :
-    displayProgress <= 60 ? 2 :
-    displayProgress <= 85 ? 3 : 4;
+    displayProgress <= 16 ? 0 :
+    displayProgress <= 32 ? 1 :
+    displayProgress <= 48 ? 2 :
+    displayProgress <= 66 ? 3 :
+    displayProgress <= 84 ? 4 : 5;
 
   useEffect(() => {
     const t = setInterval(() => setDots(d => d % 3 + 1), 500);
@@ -65,23 +68,25 @@ export default function LoadingView({ isJapanese, progress = 0, onCancel }) {
   }, [safeProgress]);
 
   useEffect(() => {
-    if (safeProgress >= 96) {
-      setDisplayProgress(safeProgress);
+    if (safeProgress >= 100) {
+      setDisplayProgress(100);
       setIsStalled(false);
       return;
     }
 
     const t = setInterval(() => {
       setDisplayProgress(prev => {
-        const target = Math.max(prev, safeProgress);
-        if (target >= 95) return 95;
-        return Math.min(Math.max(target + 1, prev + 1), 95);
+        const base = Math.max(prev, safeProgress, 8);
+        const cap = safeProgress >= 90 ? 96 : safeProgress >= 70 ? 90 : safeProgress >= 40 ? 80 : 68;
+        if (base >= cap) return base;
+        const step = base < 32 ? 2 : 1;
+        return Math.min(base + step, cap);
       });
-    }, 900);
+    }, 650);
 
     const stallTimer = setTimeout(() => {
       if (safeProgress < 95) setIsStalled(true);
-    }, 12000);
+    }, 14000);
 
     return () => {
       clearInterval(t);
@@ -106,12 +111,22 @@ export default function LoadingView({ isJapanese, progress = 0, onCancel }) {
           </div>
 
           <div className="loading-copy">
+            <div className="loading-note">
+              {isJapanese
+                ? 'AI が学習パックを作成しています'
+                : 'AI is creating your study pack'}
+            </div>
             <div className="loading-msg" key={stageIdx}>
               {stages[stageIdx]}
               <span className="loading-dots">{'.' .repeat(dots)}</span>
             </div>
 
             <div className="loading-status-card">
+              <div className="loading-progress-head">
+                <div className="loading-progress-label">{isJapanese ? '進行状況' : 'Progress'}</div>
+                <div className="loading-percent">{Math.round(displayProgress)}%</div>
+              </div>
+
               <div className="loading-progress-bar">
                 <div
                   className="loading-progress-fill"
@@ -137,17 +152,15 @@ export default function LoadingView({ isJapanese, progress = 0, onCancel }) {
               </div>
 
               {isStalled && (
-                <div className="loading-tip-card" style={{ borderColor: 'rgba(107,96,255,0.35)' }}>
+                <div className="loading-tip-card loading-tip-card-long">
                   <div className="loading-tip-label">{isJapanese ? '少し長めです' : 'Taking longer'}</div>
                   <div className="loading-tip-text">
                     {isJapanese
-                      ? 'もう少し時間がかかっています。処理は続いています。'
-                      : 'This is taking longer than expected. Your request is still processing.'}
+                      ? '内容量が多いと少し長くなることがあります。処理はそのまま続いています。'
+                      : 'This can take a bit longer with larger notes. Your request is still processing.'}
                   </div>
                 </div>
               )}
-
-              <div className="loading-percent">{Math.round(displayProgress)}%</div>
             </div>
 
             {onCancel && (

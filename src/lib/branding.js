@@ -3,7 +3,7 @@ export function getBrandWordmark(isJapanese = false) {
     lead: isJapanese ? 'パス' : 'Pass',
     suffix: 'AI',
     full: isJapanese ? 'パスAI' : 'PassAI',
-    iconPath: '/brand/app-icon-main.png',
+    iconPath: '/PassAICat.png',
   };
 }
 

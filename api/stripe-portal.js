@@ -10,10 +10,21 @@ export const config = {
   },
 };
 
-function getEnv() {
+function resolveAppBaseUrl(req) {
+  const configured = process.env.APP_BASE_URL ?? '';
+  if (configured && !configured.includes('localhost') && !configured.includes('127.0.0.1')) {
+    return configured;
+  }
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  const origin = req?.headers?.origin ?? '';
+  if (origin.startsWith('https://')) return origin.replace(/\/$/, '');
+  return configured;
+}
+
+function getEnv(req) {
   return {
     stripeSecret: process.env.STRIPE_SECRET_KEY ?? '',
-    appBaseUrl: process.env.APP_BASE_URL ?? '',
+    appBaseUrl: resolveAppBaseUrl(req),
   };
 }
 
@@ -46,7 +57,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No Stripe customer found for this account.' });
   }
 
-  const { stripeSecret, appBaseUrl } = getEnv();
+  const { stripeSecret, appBaseUrl } = getEnv(req);
   if (!stripeSecret) return res.status(500).json({ error: 'Missing STRIPE_SECRET_KEY' });
   if (!appBaseUrl) return res.status(500).json({ error: 'Missing APP_BASE_URL' });
 

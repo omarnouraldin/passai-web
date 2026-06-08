@@ -55,7 +55,8 @@ function renderRubyBase(base, ruby, key, furigana) {
 
 function renderPlainSegment(str, keyPrefix, furigana) {
   const parts = [];
-  const regex = /【([^|【】]+)\|([^|【】]+)】|([一-龯々仝〆ヶぁ-んァ-ンー]+)【([^【】]+)】|([+\-]?\d[\d,\.]*[%％]?)/g;
+  // [|｜] handles both half-width (U+007C) and full-width (U+FF5C) pipes
+  const regex = /【([^|｜【】]+)[|｜]([^|｜【】]+)】|([一-龯々仝〆ヶぁ-んァ-ンー]+)【([^【】]+)】|([+\-]?\d[\d,\.]*[%％]?)/g;
   let last = 0;
   let match;
 
@@ -89,7 +90,8 @@ function renderPlainSegment(str, keyPrefix, furigana) {
 
 function splitIntoMarkupSegments(text) {
   const segments = [];
-  const regex = /【([^|【】]+)\|([^|【】]+)】|《([^《》]+)》|〔([^〔〕]+)〕|｛([^｛｝]+)｝/g;
+  // [|｜] handles both half-width (U+007C) and full-width (U+FF5C) pipes from the AI
+  const regex = /【([^|｜【】]+)[|｜]([^|｜【】]+)】|《([^《》]+)》|〔([^〔〕]+)〕|｛([^｛｝]+)｝/g;
   let last = 0;
   let match;
 

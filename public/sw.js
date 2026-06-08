@@ -3,7 +3,7 @@ const CACHE = 'passai-v2';
 
 const PRECACHE = [
   '/',
-  '/brand/app-icon-main.png',
+  '/mascot/mascot-reading.png',
   '/brand/logo-en.png',
   '/brand/logo-ja.png',
   '/mascot/mascot-reading.png',

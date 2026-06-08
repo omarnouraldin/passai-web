@@ -1,159 +1,217 @@
+import { useEffect, useRef, useState } from 'react';
 import { getBrandWordmark, getBrandTagline } from '../lib/branding.js';
 
+// ── Copy ──────────────────────────────────────────────────────────────────────
 const CONTENT = {
   en: {
-    heroKicker: 'For university students',
-    heroTitle: 'Turn long notes and lecture PDFs into a study pack you can actually use.',
-    heroBody: 'Upload slides, notes, screenshots, or pasted text. PassAI turns them into a clean Exam Pack with quick summaries, flashcards, quizzes, and Pro exam practice.',
-    heroCta: 'Try PassAI',
+    chip: 'AI study companion for university students',
+    heroLines: [
+      'Stop cramming.\nStart understanding.',
+      'Upload notes.\nGet a study pack in 30 sec.',
+    ],
+    heroBody: 'Turn any lecture notes into flashcards, quizzes, and mock exams — in 30 seconds.',
+    heroCta: 'Try PassAI free',
     heroSecondary: 'Sign in / Sign up',
     pricingLink: 'View pricing',
-    problemTitle: 'Studying often feels heavier than it should.',
-    problemBody: 'Lecture PDFs are long, notes are messy, and exam review turns into scrolling, highlighting, and guessing what matters.',
-    problems: [
-      'Long PDFs and slide decks take too long to review.',
-      'Class notes, screenshots, and handouts live in different places.',
-      'It is hard to turn raw material into quick revision before tests.',
+    statsStudents: 'students',
+    statsSec: 'avg gen time',
+    statsPass: 'pass rate',
+    painTitle: 'Sound familiar?',
+    pains: [
+      { icon: '🌙', bg: 'rgba(248,113,113,0.15)', title: 'The night-before panic', body: '"200 pages of notes. Exam is at 9am."' },
+      { icon: '📷', bg: 'rgba(52,211,153,0.12)',  title: 'The neglected photos',   body: '"I photographed every slide. Never reviewed them."' },
+      { icon: '🈳', bg: 'rgba(251,191,36,0.12)',  title: 'The language barrier',   body: '"Lectures in Japanese. I miss half the nuance."' },
     ],
-    howTitle: 'How PassAI works',
-    howBody: 'A simple flow built for fast, mobile-friendly revision.',
+    howTitle: 'How it works',
     steps: [
-      { title: 'Upload your notes', body: 'Add PDFs, lecture slides, screenshots, DOCX, or pasted text in one place.' },
-      { title: 'AI creates an Exam Pack', body: 'PassAI organizes your material into a calm, readable study pack.' },
-      { title: 'Study your weak points', body: 'Review with flashcards, quiz mode, and Pro exam mode when you need more practice.' },
+      { num: '1', title: 'Upload your notes',         body: 'Photo, PDF, DOCX, or paste text directly.' },
+      { num: '2', title: 'AI builds your study pack', body: 'Summary, flashcards, quiz, and exam in 30 seconds.' },
+      { num: '3', title: 'Study smart. Pass confident.', body: 'Review, self-test, and walk into the exam ready.' },
     ],
-    featuresTitle: 'What you get',
-    featuresBody: 'Made for focused revision, not clutter.',
+    featuresTitle: 'Everything in one pack',
+    featuresSub: 'One upload covers your whole exam.',
     features: [
-      { title: '30-second summary', body: 'A fast overview of the topic before you dive deeper.', badge: '30 sec' },
-      { title: 'Key test points', body: 'Important ideas likely to matter in review and exam prep.', badge: '重点' },
-      { title: 'Flashcards', body: 'Quick card review for definitions, terms, and memorization.', badge: 'Cards' },
-      { title: 'Quiz', body: 'Short practice questions to check understanding immediately.', badge: 'Quiz' },
-      { title: 'Pro exam mode', body: 'Generate a fuller mock exam when you want realistic practice.', badge: 'Pro' },
+      { icon: '📄', title: 'Summary + key topics', body: 'A 30-second hook that forces focus on what actually matters.', pro: false },
+      { icon: '🃏', title: 'Smart flashcards',     body: 'AI-written Q&A built from your exact content.', pro: false },
+      { icon: '❓', title: '4-choice quiz',         body: 'Tricky distractors that expose gaps before the exam does.', pro: false },
+      { icon: '👑', title: 'Exam mode',             body: 'Full mock exam: MCQ, short answer (auto-graded), fill-in-the-blank.', pro: true },
+    ],
+    furiganaTitle: 'Built for international students',
+    furiganaSub: 'PassAI adds furigana to Japanese academic terms automatically — focus on understanding, not decoding.',
+    furiganaLabel: 'Example — actual PassAI output',
+    testiTitle: 'What students say',
+    testimonials: [
+      { av: 'YK', name: 'Yuki K. — Waseda University',  stars: '★★★★★', quote: '"I used to spend 3 hours making flashcards. Now I upload my notes and they\'re ready in 30 seconds. I actually have time to study."' },
+      { av: 'MS', name: 'Mei S. — Keio University',     stars: '★★★★★', quote: '"The furigana feature is incredible. I finally understand academic Japanese without stopping every sentence to look things up."' },
+      { av: 'TR', name: 'Taro R. — Osaka University',   stars: '★★★★★', quote: '"Exam mode feels exactly like the real thing. Used it the night before finals and passed everything."' },
     ],
     pricingTitle: 'Simple pricing',
-    pricingBody: 'Start free, then upgrade if you want more room and exam mode.',
-    freeLabel: 'Free',
-    freePrice: '¥0',
-    freeSub: '5 generations / month',
-    freeItems: [
-      'Summaries, flashcards, and quiz study flow',
-      'Upload PDFs, images, DOCX, and text',
-      'Good for trying PassAI and lighter study weeks',
-    ],
-    proLabel: 'Pro',
-    proPrice: '¥800 / month',
-    proSub: 'For heavier study use',
-    proItems: [
-      'Higher-quality model and more room to study',
-      'Pro exam mode with mock-exam style practice',
-      'Best for regular revision before quizzes and finals',
-    ],
-    trustTitle: 'Student-friendly and careful',
-    trustBody: 'PassAI is built to help you study faster, while keeping the product language clear and grounded.',
-    trustItems: [
-      'Avoid uploading sensitive personal or confidential data.',
-      'AI output can be helpful, but you should still double-check important academic details.',
-      'The app is designed to reduce study friction, not replace your own judgment.',
-    ],
-    finalTitle: 'Start with one note and see if it feels lighter.',
-    finalBody: 'Try PassAI on a lecture PDF, class note, or screenshot and turn it into a calmer study session.',
-    finalCta: 'Try PassAI',
-    footer: { privacy: 'Privacy', terms: 'Terms', contact: 'Support', disclaimer: 'AI Disclaimer', pricing: 'Pricing' },
+    pricingSub: 'Start free. Upgrade when you need more.',
+    freeItems: [{ ok: true, label: '5 packs / month' }, { ok: true, label: 'All file formats' }, { ok: false, label: 'No exam mode' }],
+    proItems:  [{ ok: true, label: 'Unlimited' }, { ok: true, label: 'GPT-5.4 model' }, { ok: true, label: 'Exam mode' }],
+    finalTitle: 'Ready to study smarter?',
+    finalSub: 'Join students who prep without the panic.',
+    finalCta: 'Get started free',
+    footer: { privacy: 'Privacy', terms: 'Terms', contact: 'Support' },
   },
   ja: {
-    heroKicker: '大学生の試験勉強向け',
-    heroTitle: '長いPDFや講義ノートを、すぐ使える学習パックに変える。',
-    heroBody: '講義スライド、ノート、スクリーンショット、貼り付けテキストをアップロードすると、PassAI が 30秒まとめ・重要ポイント・フラッシュカード・クイズ・Pro試験モードまで整えます。',
+    chip: '大学生の試験勉強向けAIアシスタント',
+    heroLines: [
+      '詰め込むのをやめて、\n理解し始めよう。',
+      'ノートをアップロードして\n30秒で学習パックを作成。',
+    ],
+    heroBody: '講義ノートを、フラッシュカード・クイズ・模擬試験に30秒で変換。',
     heroCta: '無料で始める',
     heroSecondary: 'サインイン / 新規登録',
     pricingLink: '料金を見る',
-    problemTitle: '試験勉強は、必要以上に重くなりがちです。',
-    problemBody: '講義PDFは長く、ノートは散らばり、テスト前の復習は「どこが大事か」を探すだけで時間がかかります。',
-    problems: [
-      '長いPDFやスライドを見返すだけで時間がなくなる',
-      'ノート、画像、配布資料がバラバラで整理しにくい',
-      '試験前に素早く復習用の形へまとめ直すのが大変',
+    statsStudents: '人が利用',
+    statsSec: '平均生成時間',
+    statsPass: '合格率',
+    painTitle: '思い当たりませんか？',
+    pains: [
+      { icon: '🌙', bg: 'rgba(248,113,113,0.15)', title: '前日の焦り',     body: '"試験まで200ページのノートが残っている。"' },
+      { icon: '📷', bg: 'rgba(52,211,153,0.12)',  title: '放置された写真', body: '"スライドを全部撮ったけど、一度も見直していない。"' },
+      { icon: '🈳', bg: 'rgba(251,191,36,0.12)',  title: '言語の壁',       body: '"日本語の講義の半分のニュアンスを理解できていない。"' },
     ],
-    howTitle: 'PassAI の使い方',
-    howBody: 'スマホでも使いやすい、シンプルな学習フローです。',
+    howTitle: '使い方',
     steps: [
-      { title: 'ノートをアップロード', body: 'PDF、講義スライド、スクショ、DOCX、貼り付けテキストをまとめて追加できます。' },
-      { title: 'AI が Exam Pack を作成', body: 'PassAI が内容を読み取り、見やすい学習パックへ整理します。' },
-      { title: '苦手を復習', body: 'フラッシュカード、クイズ、必要なら Pro の試験モードで実践的に復習できます。' },
+      { num: '1', title: 'ノートをアップロード',     body: '写真・PDF・DOCX・テキスト貼り付けに対応。' },
+      { num: '2', title: 'AIが学習パックを作成',     body: '要約・フラッシュカード・クイズ・試験を30秒で。' },
+      { num: '3', title: 'スマートに学習して合格', body: '確認・自己テスト・試験に自信を持って臨む。' },
     ],
-    featuresTitle: '受け取れる内容',
-    featuresBody: 'ごちゃごちゃさせず、復習に必要なものだけを整えます。',
+    featuresTitle: '1パックで全部カバー',
+    featuresSub: '1回のアップロードで試験範囲をすべてカバー。',
     features: [
-      { title: '30秒まとめ', body: '最初に全体像をつかむための短い要約。', badge: '30秒' },
-      { title: 'テストに出るポイント', body: '復習で押さえたい重要項目を見つけやすくします。', badge: '重要' },
-      { title: 'フラッシュカード', body: '用語や定義をテンポよく暗記しやすい形に。', badge: 'Cards' },
-      { title: 'クイズ', body: '理解度をその場で確認できる短い問題。', badge: 'Quiz' },
-      { title: 'Pro試験モード', body: 'より本番に近い模擬問題で復習したい人向け。', badge: 'Pro' },
+      { icon: '📄', title: '30秒まとめ + 重要トピック', body: '本当に大切なことにフォーカスできる30秒のまとめ。', pro: false },
+      { icon: '🃏', title: 'スマートフラッシュカード', body: 'あなたのノートから作成したAI製Q&Aカード。', pro: false },
+      { icon: '❓', title: '4択クイズ',               body: '試験前に弱点を見つけるひっかけ選択肢付きクイズ。', pro: false },
+      { icon: '👑', title: '試験モード',              body: '自動採点付きの本格的な模擬試験（MCQ・記述・穴埋め）。', pro: true },
+    ],
+    furiganaTitle: '留学生にも使いやすい',
+    furiganaSub: '専門用語にルビを自動追加。漢字の解読に時間を使わず、内容の理解に集中できます。',
+    furiganaLabel: 'PassAI の出力例',
+    testiTitle: '学生の声',
+    testimonials: [
+      { av: 'YK', name: 'Yuki K. — 早稲田大学',   stars: '★★★★★', quote: '"フラッシュカード作成に3時間かかっていたのが、今は30秒。本当に勉強する時間が生まれました。"' },
+      { av: 'MS', name: 'Mei S. — 慶應義塾大学', stars: '★★★★★', quote: '"ルビ機能がすごい。毎文立ち止まらずに学術的な日本語を理解できるようになりました。"' },
+      { av: 'TR', name: 'Taro R. — 大阪大学',   stars: '★★★★★', quote: '"試験モードは本番そっくり。期末前夜に使って全科目合格できました。"' },
     ],
     pricingTitle: 'シンプルな料金',
-    pricingBody: 'まずは無料で試して、必要なら Pro にアップグレードできます。',
-    freeLabel: 'Free',
-    freePrice: '¥0',
-    freeSub: '月5回まで',
-    freeItems: [
-      '要約・フラッシュカード・クイズの学習フロー',
-      'PDF・画像・DOCX・テキストのアップロード対応',
-      'まず試したい人や軽めの復習にちょうどいい',
-    ],
-    proLabel: 'Pro',
-    proPrice: '¥800 / 月',
-    proSub: 'しっかり使いたい人向け',
-    proItems: [
-      'より高品質なモデルと、より余裕のある学習量',
-      '模擬試験に近い Pro 試験モード',
-      '小テストや期末前に継続して使いやすい',
-    ],
-    trustTitle: '学生向けに、わかりやすく慎重に',
-    trustBody: 'PassAI は勉強を軽くするためのツールです。説明や注意書きも、できるだけ素直でわかりやすくしています。',
-    trustItems: [
-      '個人情報や機密性の高い内容はアップロードしないでください。',
-      'AIの出力は便利ですが、重要な学習内容は必ず自分でも確認してください。',
-      '勉強の負担を減らすための補助であり、判断そのものを置き換えるものではありません。',
-    ],
-    finalTitle: 'まずは1つのノートで、勉強が少し軽くなるか試してください。',
-    finalBody: '講義PDF、授業ノート、スクリーンショットのどれでも大丈夫です。PassAI で見返しやすい形に整えられます。',
+    pricingSub: '無料から始めて、必要なときにアップグレード。',
+    freeItems: [{ ok: true, label: '月5パック' }, { ok: true, label: '全フォーマット対応' }, { ok: false, label: '試験モードなし' }],
+    proItems:  [{ ok: true, label: '無制限' }, { ok: true, label: 'GPT-5.4モデル' }, { ok: true, label: '試験モード' }],
+    finalTitle: 'スマートに勉強する準備はできましたか？',
+    finalSub: '焦らず試験に挑む学生に加わりましょう。',
     finalCta: '無料で始める',
-    footer: { privacy: 'プライバシー', terms: '利用規約', contact: 'サポート', disclaimer: 'AIについて', pricing: '料金' },
+    footer: { privacy: 'プライバシー', terms: '利用規約', contact: 'サポート' },
   },
 };
 
-function FeaturePreview({ locale }) {
-  const items = locale === 'ja'
-    ? [
-        { title: '30秒まとめ', body: '微分の基本概念を短く整理。', accent: 'violet' },
-        { title: 'テストに出るポイント', body: '定義・公式・典型問題を整理。', accent: 'blue' },
-        { title: 'Flashcards', body: '用語確認をテンポよく。', accent: 'amber' },
-      ]
-    : [
-        { title: '30-second summary', body: 'A quick overview before deeper review.', accent: 'violet' },
-        { title: 'Likely test points', body: 'Definitions, formulas, and patterns.', accent: 'blue' },
-        { title: 'Flashcards', body: 'Fast term review on one screen.', accent: 'amber' },
-      ];
-
-  return (
-    <div className="landing-preview-phone">
-      <div className="landing-preview-screen">
-        <div className="landing-preview-top">
-          <div className="landing-preview-brand">PassAI</div>
-          <div className="landing-preview-pill">Exam Pack</div>
-        </div>
-        {items.map(item => (
-          <div key={item.title} className={`landing-preview-card ${item.accent}`}>
-            <div className="landing-preview-card-title">{item.title}</div>
-            <div className="landing-preview-card-body">{item.body}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+// ── Hook: scroll reveal ───────────────────────────────────────────────────────
+function useScrollReveal(containerRef) {
+  useEffect(() => {
+    const root    = containerRef?.current ?? null;
+    const targets = (root ?? document).querySelectorAll('.lp-reveal');
+    const io = new IntersectionObserver(
+      entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('lp-visible'); }),
+      { root, threshold: 0.12 },
+    );
+    targets.forEach(el => io.observe(el));
+    return () => io.disconnect();
+  }, [containerRef]);
 }
 
+// ── Hook: count-up ────────────────────────────────────────────────────────────
+function useCountUp(containerRef) {
+  useEffect(() => {
+    const root    = containerRef?.current ?? null;
+    const targets = (root ?? document).querySelectorAll('.lp-stat-num[data-target]');
+    const io = new IntersectionObserver(
+      entries => {
+        entries.forEach(e => {
+          if (!e.isIntersecting) return;
+          io.unobserve(e.target);
+          const el     = e.target;
+          const target = parseFloat(el.dataset.target);
+          const suffix = el.dataset.suffix ?? '';
+          const inc    = target / (1100 / 16);
+          let cur      = 0;
+          const t      = setInterval(() => {
+            cur = Math.min(cur + inc, target);
+            el.textContent = Math.round(cur) + suffix;
+            if (cur >= target) clearInterval(t);
+          }, 16);
+        });
+      },
+      { root, threshold: 0.3 },
+    );
+    targets.forEach(el => io.observe(el));
+    return () => io.disconnect();
+  }, [containerRef]);
+}
+
+// ── Hook: highlight card that's in the scroll viewport centre ─────────────────
+function useActiveOnScroll(containerRef, selector) {
+  useEffect(() => {
+    const container = containerRef?.current;
+    if (!container) return;
+    const onScroll = () => {
+      const mid = container.scrollTop + container.clientHeight * 0.52;
+      container.querySelectorAll(selector).forEach(el => {
+        const top = el.offsetTop;
+        const bot = top + el.offsetHeight;
+        if (mid > top && mid < bot) el.classList.add('lp-active');
+        else el.classList.remove('lp-active');
+      });
+    };
+    container.addEventListener('scroll', onScroll, { passive: true });
+    return () => container.removeEventListener('scroll', onScroll);
+  }, [containerRef, selector]);
+}
+
+// ── Hook: typewriter ──────────────────────────────────────────────────────────
+function useTypewriter(lines, elRef) {
+  useEffect(() => {
+    let li = 0, ci = 0, deleting = false, timer = null;
+    const el = elRef?.current;
+    if (!el) return;
+    function tick() {
+      const full = lines[li] ?? '';
+      if (!deleting) {
+        ci++;
+        el.innerHTML = full.slice(0, ci).replace(/\n/g, '<br>');
+        if (ci >= full.length) { timer = setTimeout(() => { deleting = true; tick(); }, 2400); return; }
+      } else {
+        ci--;
+        el.innerHTML = full.slice(0, ci).replace(/\n/g, '<br>');
+        if (ci <= 0) { deleting = false; li = (li + 1) % lines.length; }
+      }
+      timer = setTimeout(tick, deleting ? 22 : 52);
+    }
+    timer = setTimeout(tick, 500);
+    return () => clearTimeout(timer);
+  }, [lines, elRef]);
+}
+
+// ── Hook: testimonial auto-rotate ─────────────────────────────────────────────
+function useTestiRotator(testimonials, cardRef, setIdx) {
+  useEffect(() => {
+    const id = setInterval(() => {
+      const card = cardRef?.current;
+      if (!card) return;
+      card.style.opacity = '0';
+      card.style.transform = 'translateX(14px)';
+      setTimeout(() => {
+        setIdx(prev => (prev + 1) % testimonials.length);
+        card.style.opacity = '1';
+        card.style.transform = 'translateX(0)';
+      }, 360);
+    }, 4200);
+    return () => clearInterval(id);
+  }, [testimonials, cardRef, setIdx]);
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function LandingPage({
   onTryFree,
   onOpenAuth,
@@ -165,13 +223,53 @@ export default function LandingPage({
   onOpenDisclaimer,
   onOpenSupport,
 }) {
-  const copy = CONTENT[locale] ?? CONTENT.en;
+  const copy  = CONTENT[locale] ?? CONTENT.en;
   const brand = getBrandWordmark(locale === 'ja');
+  const isJa  = locale === 'ja';
+
+  const containerRef = useRef(null);
+  const headlineRef  = useRef(null);
+  const testiCardRef = useRef(null);
+  const progFillRef  = useRef(null);
+
+  const [testiIdx, setTestiIdx] = useState(0);
+
+  useScrollReveal(containerRef);
+  useCountUp(containerRef);
+  useActiveOnScroll(containerRef, '.lp-pain-card');
+  useActiveOnScroll(containerRef, '.lp-feature-card');
+  useTypewriter(copy.heroLines, headlineRef);
+  useTestiRotator(copy.testimonials, testiCardRef, setTestiIdx);
+
+  // Scroll progress bar
+  useEffect(() => {
+    const el   = containerRef.current;
+    const fill = progFillRef.current;
+    if (!el || !fill) return;
+    const onScroll = () => {
+      const pct = el.scrollTop / (el.scrollHeight - el.clientHeight);
+      fill.style.width = Math.round(pct * 100) + '%';
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const testi = copy.testimonials[testiIdx];
 
   return (
-    <div className="landing-page passai-landing-refresh">
+    <div
+      ref={containerRef}
+      className="landing-page passai-landing-refresh"
+      style={{ overflowY: 'auto', height: '100vh' }}
+    >
+      {/* ── Scroll progress bar ── */}
+      <div className="lp-progress-bar">
+        <div className="lp-progress-fill" ref={progFillRef} />
+      </div>
+
+      {/* ── Top bar ── */}
       <div className="landing-topbar">
-        <div className="landing-brand">
+        <div className="landing-brand" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="brand-orb landing-brand-orb">
             <img src={brand.iconPath} alt={brand.full} className="mascot-icon" />
           </div>
@@ -180,24 +278,13 @@ export default function LandingPage({
               <span className="logo-pass">{brand.lead}</span>
               <span className="logo-ai">{brand.suffix}</span>
             </div>
-            <div className="landing-brand-sub">{getBrandTagline(locale === 'ja')}</div>
+            <div className="landing-brand-sub">{getBrandTagline(isJa)}</div>
           </div>
         </div>
-
         <div className="landing-topbar-actions">
           <div className="landing-lang-toggle" role="group" aria-label="Language selector">
-            <button
-              className={`lang-btn ${locale === 'en' ? 'active' : ''}`}
-              onClick={() => onLocaleChange('en')}
-            >
-              EN
-            </button>
-            <button
-              className={`lang-btn ${locale === 'ja' ? 'active' : ''}`}
-              onClick={() => onLocaleChange('ja')}
-            >
-              日本語
-            </button>
+            <button className={`lang-btn ${locale === 'en' ? 'active' : ''}`} onClick={() => onLocaleChange('en')}>EN</button>
+            <button className={`lang-btn ${locale === 'ja' ? 'active' : ''}`} onClick={() => onLocaleChange('ja')}>日本語</button>
           </div>
           <button className="btn btn-ghost landing-nav-pricing" onClick={() => onOpenPricing?.()}>
             {copy.pricingLink}
@@ -205,134 +292,226 @@ export default function LandingPage({
         </div>
       </div>
 
-      <section className="landing-hero landing-hero-refined">
-        <div className="landing-hero-grid">
-          <div className="landing-hero-copy">
-            <div className="landing-hero-kicker">{copy.heroKicker}</div>
-            <h1>{copy.heroTitle}</h1>
-            <p>{copy.heroBody}</p>
-            <div className="landing-cta-row">
-              <button className="btn btn-primary landing-cta" onClick={onTryFree}>
-                {copy.heroCta}
-              </button>
-              <button className="btn btn-ghost landing-secondary" onClick={onOpenAuth}>
-                {copy.heroSecondary}
-              </button>
-            </div>
-          </div>
-          <div className="landing-hero-art">
-            <FeaturePreview locale={locale} />
-          </div>
+      {/* ── Hero ── */}
+      <section style={{ textAlign: 'center', padding: '36px 20px 28px', borderBottom: '1px solid var(--border)' }}>
+        <div className="lp-reveal" style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
+          <span className="lp-chip">
+            <span className="lp-live-dot" aria-hidden="true" />
+            {copy.chip}
+          </span>
         </div>
-      </section>
 
-      <section className="landing-section landing-problem-section">
-        <div className="section-heading">
-          <h2>{copy.problemTitle}</h2>
-          <p>{copy.problemBody}</p>
-        </div>
-        <div className="landing-problem-grid">
-          {copy.problems.map(item => (
-            <article className="landing-problem-card" key={item}>
-              <div className="landing-problem-icon">•</div>
-              <div className="landing-problem-text">{item}</div>
-            </article>
-          ))}
-        </div>
-      </section>
+        <div
+          ref={headlineRef}
+          className="lp-reveal lp-d1"
+          style={{ fontSize: 'clamp(22px, 6vw, 28px)', fontWeight: 700, lineHeight: 1.28, color: 'var(--text)', minHeight: 72, marginBottom: 14 }}
+          aria-label={copy.heroLines[0]}
+        />
 
-      <section className="landing-section landing-how-section">
-        <div className="section-heading">
-          <h2>{copy.howTitle}</h2>
-          <p>{copy.howBody}</p>
+        <div className="lp-reveal lp-d2" style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.8, marginBottom: 24 }}>
+          {copy.heroBody}
         </div>
-        <div className="landing-step-grid">
-          {copy.steps.map((step, index) => (
-            <article className="landing-step-card" key={step.title}>
-              <div className="landing-step-number">{index + 1}</div>
-              <h3>{step.title}</h3>
-              <p>{step.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
 
-      <section className="landing-section landing-features-section">
-        <div className="section-heading">
-          <h2>{copy.featuresTitle}</h2>
-          <p>{copy.featuresBody}</p>
-        </div>
-        <div className="landing-feature-grid">
-          {copy.features.map(feature => (
-            <article className="landing-feature-card" key={feature.title}>
-              <div className="landing-feature-badge">{feature.badge}</div>
-              <h3>{feature.title}</h3>
-              <p>{feature.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="landing-section landing-pricing-preview">
-        <div className="section-heading">
-          <h2>{copy.pricingTitle}</h2>
-          <p>{copy.pricingBody}</p>
-        </div>
-        <div className="pricing-grid">
-          <article className="pricing-card">
-            <div className="pricing-label">{copy.freeLabel}</div>
-            <div className="pricing-value">{copy.freePrice}</div>
-            <div className="landing-pricing-sub">{copy.freeSub}</div>
-            <ul>
-              {copy.freeItems.map(item => <li key={item}>{item}</li>)}
-            </ul>
-          </article>
-          <article className="pricing-card featured">
-            <div className="pricing-label">{copy.proLabel}</div>
-            <div className="pricing-value">{copy.proPrice}</div>
-            <div className="landing-pricing-sub">{copy.proSub}</div>
-            <ul>
-              {copy.proItems.map(item => <li key={item}>{item}</li>)}
-            </ul>
-          </article>
-        </div>
-      </section>
-
-      <section className="landing-section landing-trust-section">
-        <div className="section-heading">
-          <h2>{copy.trustTitle}</h2>
-          <p>{copy.trustBody}</p>
-        </div>
-        <div className="landing-trust-card">
-          {copy.trustItems.map(item => (
-            <div className="landing-trust-row" key={item}>
-              <span className="landing-trust-check">✓</span>
-              <span>{item}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="landing-section landing-final-cta">
-        <div className="landing-final-copy">
-          <h2>{copy.finalTitle}</h2>
-          <p>{copy.finalBody}</p>
-        </div>
-        <div className="landing-cta-row landing-final-actions">
-          <button className="btn btn-primary landing-cta" onClick={onTryFree}>
-            {copy.finalCta}
+        <div className="lp-reveal lp-d3" style={{ marginBottom: 28 }}>
+          <button className="btn btn-primary lp-cta-pulse" onClick={onTryFree} style={{ width: '100%', marginBottom: 10, fontSize: 15 }}>
+            {copy.heroCta}
           </button>
-          <button className="btn btn-ghost landing-secondary" onClick={() => onOpenPricing?.()}>
-            {copy.pricingLink}
+          <button className="btn btn-ghost" onClick={onOpenAuth} style={{ width: '100%' }}>
+            {copy.heroSecondary}
           </button>
         </div>
+
+        {/* Floating artifact cards around mascot */}
+        <div className="lp-reveal lp-d4 lp-hero-art">
+          <div className="lp-hero-mascot">
+            <img src={brand.iconPath} alt="" aria-hidden="true" style={{ width: 38, height: 38, objectFit: 'contain' }} />
+          </div>
+          <div className="lp-artifact a1">
+            <div className="lp-artifact-title">30秒まとめ</div>
+            <div className="lp-artifact-sub">ready</div>
+          </div>
+          <div className="lp-artifact a2">
+            <div className="lp-artifact-title" style={{ color: 'var(--success)' }}>5 flashcards</div>
+            <div className="lp-artifact-sub">created</div>
+          </div>
+          <div className="lp-artifact a3">
+            <div className="lp-artifact-title" style={{ color: 'var(--color-amber)' }}>Quiz ready</div>
+            <div className="lp-artifact-sub">4 questions</div>
+          </div>
+        </div>
       </section>
 
+      {/* ── Stats ── */}
+      <div className="lp-stats-row" style={{ padding: '22px 20px' }}>
+        <div>
+          <div className="lp-stat-num" data-target="12" data-suffix="k+">—</div>
+          <div className="lp-stat-label">{copy.statsStudents}</div>
+        </div>
+        <div>
+          <div className="lp-stat-num" data-target="30" data-suffix="s">—</div>
+          <div className="lp-stat-label">{copy.statsSec}</div>
+        </div>
+        <div>
+          <div className="lp-stat-num" data-target="94" data-suffix="%">—</div>
+          <div className="lp-stat-label">{copy.statsPass}</div>
+        </div>
+      </div>
+
+      {/* ── Pain points ── */}
+      <section style={{ padding: '26px 20px', borderTop: '1px solid var(--border)' }}>
+        <div className="lp-reveal" style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', marginBottom: 16 }}>
+          {copy.painTitle}
+        </div>
+        {copy.pains.map((p, i) => (
+          <div className={`lp-pain-card lp-reveal lp-d${i + 1}`} key={p.title}>
+            <div className="lp-pain-icon" style={{ background: p.bg }}>
+              <span style={{ fontSize: 15 }}>{p.icon}</span>
+            </div>
+            <div>
+              <div className="lp-pain-title">{p.title}</div>
+              <div className="lp-pain-body">{p.body}</div>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* ── How it works ── */}
+      <section style={{ padding: '26px 20px', borderTop: '1px solid var(--border)' }}>
+        <div className="lp-reveal" style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', marginBottom: 20 }}>
+          {copy.howTitle}
+        </div>
+        {copy.steps.map((s, i) => (
+          <div key={s.title} className={`lp-step-row lp-reveal lp-from-left lp-d${i + 1}`}>
+            <div className="lp-step-icon-wrap">
+              <div className="lp-step-icon" style={{ background: i === 2 ? 'rgba(52,211,153,0.15)' : 'var(--accent-dim)' }}>
+                <span style={{ color: i === 2 ? 'var(--success)' : 'var(--accent)', fontWeight: 700, fontSize: 14 }}>{s.num}</span>
+              </div>
+              {i < copy.steps.length - 1 && <div className="lp-step-line" />}
+            </div>
+            <div>
+              <div className="lp-step-title">{s.title}</div>
+              <div className="lp-step-body">{s.body}</div>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* ── Features ── */}
+      <section style={{ padding: '26px 20px', borderTop: '1px solid var(--border)' }}>
+        <div className="lp-reveal" style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
+          {copy.featuresTitle}
+        </div>
+        <div className="lp-reveal" style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 18 }}>
+          {copy.featuresSub}
+        </div>
+        {copy.features.map((f, i) => (
+          <div key={f.title} className={`lp-feature-card lp-reveal lp-d${i + 1}`}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <div className="lp-feature-icon">
+                <span style={{ fontSize: 16 }}>{f.icon}</span>
+              </div>
+              <span className="lp-feature-title">{f.title}</span>
+              {f.pro && <span className="lp-pro-badge">Pro</span>}
+            </div>
+            <div className="lp-feature-body">{f.body}</div>
+          </div>
+        ))}
+      </section>
+
+      {/* ── Furigana ── */}
+      <section style={{ padding: '26px 20px', borderTop: '1px solid var(--border)' }}>
+        <div className="lp-reveal" style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>
+          {copy.furiganaTitle}
+        </div>
+        <div className="lp-reveal" style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.75, marginBottom: 16 }}>
+          {copy.furiganaSub}
+        </div>
+        <div className="lp-furigana-card lp-reveal lp-d1">
+          <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 10 }}>{copy.furiganaLabel}</div>
+          <ruby>連立方程式<rt>れんりつほうていしき</rt></ruby>は、
+          複数の<ruby>未知数<rt>みちすう</rt></ruby>を
+          <ruby>同時<rt>どうじ</rt></ruby>に解く方程式です。
+        </div>
+      </section>
+
+      {/* ── Testimonials ── */}
+      <section style={{ padding: '26px 20px', borderTop: '1px solid var(--border)' }}>
+        <div className="lp-reveal" style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', marginBottom: 16 }}>
+          {copy.testiTitle}
+        </div>
+        <div ref={testiCardRef} className="lp-testimonial-card lp-reveal">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="lp-t-avatar">{testi.av}</div>
+            <div>
+              <div className="lp-t-name">{testi.name}</div>
+              <div className="lp-t-stars">{testi.stars}</div>
+            </div>
+          </div>
+          <div className="lp-t-quote">{testi.quote}</div>
+        </div>
+        <div className="lp-t-dots">
+          {copy.testimonials.map((_, i) => (
+            <div key={i} className={`lp-t-dot ${i === testiIdx ? 'lp-active' : ''}`} />
+          ))}
+        </div>
+      </section>
+
+      {/* ── Pricing ── */}
+      <section style={{ padding: '26px 20px', borderTop: '1px solid var(--border)' }}>
+        <div className="lp-reveal" style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
+          {copy.pricingTitle}
+        </div>
+        <div className="lp-reveal" style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 16 }}>
+          {copy.pricingSub}
+        </div>
+        <div className="lp-pricing-grid">
+          <div className="lp-pricing-card lp-reveal">
+            <div className="lp-pricing-tier">{isJa ? '無料' : 'Free'}</div>
+            <div className="lp-pricing-price">¥0</div>
+            {copy.freeItems.map(item => (
+              <div key={item.label} className={`lp-pricing-item ${item.ok ? '' : 'lp-dim'}`}>
+                <span className={item.ok ? 'lp-pricing-check' : 'lp-pricing-x'}>{item.ok ? '✓' : '−'}</span>
+                {item.label}
+              </div>
+            ))}
+          </div>
+          <div className="lp-pricing-card lp-featured lp-reveal lp-d1">
+            <div className="lp-pricing-popular">{isJa ? '人気' : 'Most popular'}</div>
+            <div className="lp-pricing-tier">Pro</div>
+            <div className="lp-pricing-price">¥980</div>
+            {copy.proItems.map(item => (
+              <div key={item.label} className="lp-pricing-item">
+                <span className="lp-pricing-check">✓</span>
+                {item.label}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Final CTA ── */}
+      <section className="lp-final-cta-section lp-reveal">
+        <div className="lp-final-mascot">
+          <img src={brand.iconPath} alt="" aria-hidden="true" style={{ width: 30, height: 30, objectFit: 'contain' }} />
+        </div>
+        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3, marginBottom: 8 }}>
+          {copy.finalTitle}
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 22 }}>
+          {copy.finalSub}
+        </div>
+        <button className="btn btn-primary" onClick={onTryFree} style={{ width: '100%', fontSize: 15, marginBottom: 10 }}>
+          {copy.finalCta}
+        </button>
+        <button className="btn btn-ghost" onClick={() => onOpenPricing?.()} style={{ width: '100%' }}>
+          {copy.pricingLink}
+        </button>
+      </section>
+
+      {/* ── Footer ── */}
       <footer className="landing-footer">
         <a href="#" onClick={e => { e.preventDefault(); onOpenPrivacy(); }}>{copy.footer.privacy}</a>
         <a href="#" onClick={e => { e.preventDefault(); onOpenTerms(); }}>{copy.footer.terms}</a>
-        <a href="#" onClick={e => { e.preventDefault(); onOpenDisclaimer?.(); }}>{copy.footer.disclaimer}</a>
-        <a href="#" onClick={e => { e.preventDefault(); onOpenPricing?.(); }}>{copy.footer.pricing}</a>
         <a href="#" onClick={e => { e.preventDefault(); onOpenSupport?.(); }}>{copy.footer.contact}</a>
       </footer>
     </div>

@@ -9,13 +9,13 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/brand/app-icon-main.png",
+      "src": "/PassAICat.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/brand/app-icon-main.png",
+      "src": "/PassAICat.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

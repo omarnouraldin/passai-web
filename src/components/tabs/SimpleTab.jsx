@@ -196,7 +196,7 @@ function ExplanationText({ text, furigana }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function SimpleTab({ summary, highlightStat, simpleExplanation, thinkingQuestions, corrections, illustrationQuery, furigana, isJapanese }) {
+export default function SimpleTab({ summary, highlightStat, simpleExplanation, thinkingQuestions, illustrationQuery, furigana, isJapanese }) {
   // Image fetch removed — decorative images break reading flow
   const hasMeaningfulHighlightStat = !!(
     highlightStat &&
@@ -208,33 +208,12 @@ export default function SimpleTab({ summary, highlightStat, simpleExplanation, t
     String(highlightStat.from).trim() !== String(highlightStat.to).trim()
   );
 
-  const hasCorrections       = corrections?.length > 0;
   const hasThinkingQuestions = thinkingQuestions?.length > 0;
 
   return (
     <div>
 
       {/* Wikipedia image intentionally removed — decorative images slow reading */}
-
-      {/* ── Corrections banner ─────────────────────────────────────── */}
-      {hasCorrections && (
-        <div style={{
-          background: 'rgba(255,69,58,0.07)', border: '1px solid rgba(255,69,58,0.25)',
-          borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 20,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <span>⚠️</span>
-            <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-red)', textTransform: 'uppercase', letterSpacing: 1 }}>
-              {isJapanese ? '修正が必要な箇所' : 'Corrections found in your notes'}
-            </span>
-          </div>
-          {corrections.map((c, i) => (
-            <div key={i} style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--text-2)', paddingTop: i > 0 ? 10 : 0, borderTop: i > 0 ? '1px solid rgba(255,69,58,0.12)' : 'none' }}>
-              <FuriganaText text={c} furigana={furigana} />
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* ── ⚡ 30-second summary ───────────────────────────────────── */}
       {summary && (
@@ -278,7 +257,7 @@ export default function SimpleTab({ summary, highlightStat, simpleExplanation, t
               borderRadius: 12, padding: '12px 20px',
               fontSize: 22, fontWeight: 800, color: 'var(--text)',
             }}>
-              {highlightStat.from}
+              <FuriganaText text={String(highlightStat.from ?? '')} furigana={furigana} />
             </div>
             <div style={{ fontSize: 22, color: 'var(--muted)', fontWeight: 300 }}>→</div>
             <div style={{
@@ -286,7 +265,7 @@ export default function SimpleTab({ summary, highlightStat, simpleExplanation, t
               borderRadius: 12, padding: '12px 20px',
               fontSize: 22, fontWeight: 800, color: 'var(--text)',
             }}>
-              {highlightStat.to}
+              <FuriganaText text={String(highlightStat.to ?? '')} furigana={furigana} />
             </div>
           </div>
 
@@ -298,7 +277,7 @@ export default function SimpleTab({ summary, highlightStat, simpleExplanation, t
                 borderRadius: 50, padding: '6px 20px',
                 fontSize: 20, fontWeight: 800, letterSpacing: -0.5,
               }}>
-                {highlightStat.magnitude}
+                <FuriganaText text={String(highlightStat.magnitude)} furigana={furigana} />
               </div>
             </div>
           )}

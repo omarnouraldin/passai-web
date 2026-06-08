@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import HomeView from './components/HomeView.jsx';
+import UploadView from './components/UploadView.jsx';
 import ResultsView from './components/ResultsView.jsx';
+import ProfileView from './components/ProfileView.jsx';
 import HistoryView from './components/HistoryView.jsx';
 import LoadingView from './components/LoadingView.jsx';
 import AuthModal from './components/AuthModal.jsx';
@@ -53,9 +55,10 @@ function detectInitialLocale() {
 
 // ── Inner app (has access to auth context) ───────────────────────────────────
 function AppInner() {
-  const { user, isPro, getAccessToken, refreshProfile } = useAuth();
+  const { user, isPro, isAdmin, getAccessToken, refreshProfile } = useAuth();
 
   const [view,          setView]        = useState('home');
+  const [adminModel,    setAdminModel]  = useState('gpt-5.4-mini');
   const [isLoading,     setIsLoading]   = useState(false);
   const [progress,      setProgress]    = useState(0);
   const [generated,     setGenerated]   = useState(null);
@@ -171,7 +174,8 @@ function AppInner() {
   }, [isLoading]);
 
   // fileData = { text } | { imageBase64, mediaType } | null
-  async function generate(noteText, fileData, adminModel = 'auto') {
+  async function generate(noteText, fileData, modelOverride) {
+    const adminModel = modelOverride ?? 'auto';
     const controller = new AbortController();
     setAbortCtrl(controller);
     setIsLoading(true);
@@ -326,8 +330,21 @@ function AppInner() {
   }
 
   function openProfileFromNav() {
-    setView('home');
-    setProfileOpenSignal(v => v + 1);
+    setView('profile');
+  }
+
+  async function handleToggleSelfPro() {
+    if (!isAdmin) return;
+    const token = await getAccessToken();
+    if (!token) return;
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: 'set_self_pro', isPro: !isPro }),
+    });
+    if (!res.ok) return;
+    const data = await res.json().catch(() => null);
+    await refreshProfile({ isAdmin: true, isPro: typeof data?.isPro === 'boolean' ? data.isPro : !isPro });
   }
 
   useEffect(() => {
@@ -464,8 +481,6 @@ function AppInner() {
         />
       ) : view === 'home' ? (
         <HomeView
-          onGenerate={generate}
-          charLimit={CHAR_LIMIT}
           language={language}
           setLanguage={setLanguage}
           furigana={furigana}
@@ -476,11 +491,45 @@ function AppInner() {
           recentHistory={history}
           onOpenHistoryItem={openHistoryItem}
           profileOpenSignal={profileOpenSignal}
+          adminModel={adminModel}
+          setAdminModel={setAdminModel}
+          onNewPack={() => setView('upload')}
           onOpenPricing={openPricing}
           onOpenPrivacy={() => navigateTo('privacy')}
           onOpenTerms={() => navigateTo('terms')}
           onOpenDisclaimer={() => navigateTo('ai-disclaimer')}
           onOpenSupport={() => navigateTo('support')}
+        />
+      ) : view === 'upload' ? (
+        <UploadView
+          onGenerate={generate}
+          charLimit={CHAR_LIMIT}
+          adminModel={adminModel}
+          language={language}
+          setLanguage={setLanguage}
+          furigana={furigana}
+          setFurigana={setFurigana}
+          isJapanese={isJapanese}
+          onBack={() => setView('home')}
+        />
+      ) : view === 'profile' ? (
+        <ProfileView
+          language={language}
+          setLanguage={setLanguage}
+          furigana={furigana}
+          setFurigana={setFurigana}
+          isJapanese={isJapanese}
+          onUpgrade={startCheckout}
+          onManageBilling={openBillingPortal}
+          onOpenPricing={openPricing}
+          onOpenPrivacy={() => navigateTo('privacy')}
+          onOpenTerms={() => navigateTo('terms')}
+          onOpenDisclaimer={() => navigateTo('ai-disclaimer')}
+          onOpenSupport={() => navigateTo('support')}
+          adminModel={adminModel}
+          setAdminModel={setAdminModel}
+          onToggleSelfPro={handleToggleSelfPro}
+          onBack={() => setView('home')}
         />
       ) : view === 'results' && generated ? (
           <ResultsView
@@ -506,7 +555,7 @@ function AppInner() {
       {user && (
         <nav className="bottom-nav bottom-nav-three">
           <button
-            className={`nav-tab ${view !== 'history' ? 'active' : ''}`}
+            className={`nav-tab ${view === 'home' ? 'active' : ''}`}
             onClick={() => setView('home')}
           >
             <svg viewBox="0 0 24 24" fill="currentColor">
@@ -515,16 +564,18 @@ function AppInner() {
             {isJapanese ? 'ホーム' : 'Home'}
           </button>
           <button
-            className={`nav-tab ${view === 'history' ? 'active' : ''}`}
-            onClick={() => setView('history')}
+            className={`nav-tab nav-tab-center${view === 'upload' ? ' active' : ''}`}
+            onClick={() => setView('upload')}
+            aria-label={isJapanese ? '新規作成' : 'New pack'}
           >
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
-            </svg>
-            {isJapanese ? '履歴' : 'History'}
+            <span className="nav-plus-pill">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z"/>
+              </svg>
+            </span>
           </button>
           <button
-            className="nav-tab"
+            className={`nav-tab ${view === 'profile' ? 'active' : ''}`}
             onClick={openProfileFromNav}
           >
             <svg viewBox="0 0 24 24" fill="currentColor">

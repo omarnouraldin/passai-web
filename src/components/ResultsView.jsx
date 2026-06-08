@@ -5,19 +5,16 @@ import QuizTab       from './tabs/QuizTab.jsx';
 import ExamTab       from './tabs/ExamTab.jsx';
 import FuriganaText  from './FuriganaText.jsx';
 
-// ── Combined Overview tab (Summary + Topics) ──────────────────────────────────
+// ── Overview tab ──────────────────────────────────────────────────────────────
 function OverviewTab({ summary, keyTopics, furigana, isJapanese }) {
   return (
     <div className="results-overview-tab">
-      {/* Summary */}
       <div className="section-title">{isJapanese ? '要約' : 'Summary'}</div>
       <div className="card results-summary-card" style={{ marginBottom: 24 }}>
         <p className="summary-text">
           <FuriganaText text={summary} furigana={furigana} />
         </p>
       </div>
-
-      {/* Key Topics */}
       <div className="section-title">{isJapanese ? 'キートピック' : 'Key Topics'}</div>
       <div className="results-topic-grid">
         {keyTopics?.map((t, i) => (
@@ -31,6 +28,7 @@ function OverviewTab({ summary, keyTopics, furigana, isJapanese }) {
   );
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function stripMarkup(text = '') {
   return text
     .replace(/【([^|【】]+)\|([^|【】]+)】/g, '$1')
@@ -62,30 +60,47 @@ function buildShareText(content, isJapanese) {
   return lines.join('\n');
 }
 
-export default function ResultsView({ content, contentId, originalInput, furigana, isJapanese, onBack, onToast, onUpgrade }) {
-  // 5 tabs: Simple | Overview | Flashcards | Quiz | Exam(PRO)
+function getTitle(content, originalInput, isJapanese) {
+  const snippet = originalInput?.noteText?.trim();
+  if (snippet) return snippet.slice(0, 38) + (snippet.length > 38 ? '…' : '');
+  return isJapanese ? '学習パック' : 'Study Pack';
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+export default function ResultsView({
+  content, contentId, originalInput,
+  furigana, isJapanese,
+  onBack, onToast, onUpgrade,
+}) {
   const tabDefs = isJapanese
-    ? ['解説', '概要', 'フラッシュカード', 'クイズ', '試験']
-    : ['Simple', 'Overview', 'Flashcards', 'Quiz', 'Exam'];
+    ? [
+        { label: '解説',           pro: false },
+        { label: '概要',           pro: false },
+        { label: 'カード',         pro: false },
+        { label: 'クイズ',         pro: false },
+        { label: '試験',           pro: true  },
+      ]
+    : [
+        { label: 'Simple',        pro: false },
+        { label: 'Overview',      pro: false },
+        { label: 'Flashcards',    pro: false },
+        { label: 'Quiz',          pro: false },
+        { label: 'Exam',          pro: true  },
+      ];
 
   const [activeTab, setActiveTab] = useState(0);
   const [copied,    setCopied]    = useState(false);
 
-  const hasCorrections = content.corrections?.length > 0;
-  const brandLabel = isJapanese ? 'PassAI' : 'PassAI';
-  const shareTitle = isJapanese ? '30秒まとめ' : '30-second summary';
-  const shareLead = String(content.summary ?? '')
-    .split('\n')
-    .map(line => line.trim())
-    .find(Boolean) ?? '';
-  const shareTopics = (content.keyTopics ?? []).slice(0, 3);
-  const subjectLabel = (() => {
-    const raw = String(originalInput?.noteText ?? '').trim();
-    if (!raw) return null;
-    const firstLine = raw.split('\n').map(line => line.trim()).find(Boolean) ?? '';
-    if (!firstLine) return null;
-    return firstLine.length > 28 ? `${firstLine.slice(0, 28)}…` : firstLine;
-  })();
+  const flashCount = content.flashcards?.length ?? 0;
+  const quizCount  = content.quiz?.length ?? 0;
+  const hasSummary = !!content.summary;
+  const title      = getTitle(content, originalInput, isJapanese);
+
+  const stats = [
+    flashCount > 0 && { num: flashCount, label: isJapanese ? 'カード' : 'Cards' },
+    quizCount  > 0 && { num: quizCount,  label: isJapanese ? 'クイズ' : 'Quiz' },
+    hasSummary     && { num: 1,          label: isJapanese ? '要約'   : 'Summary' },
+  ].filter(Boolean);
 
   async function handleShare() {
     const text  = buildShareText(content, isJapanese);
@@ -104,135 +119,98 @@ export default function ResultsView({ content, contentId, originalInput, furigan
   }
 
   return (
-    <div className="page results-page">
-      <button className="back-btn" onClick={onBack}>
-        ← {isJapanese ? '戻る' : 'Back'}
-      </button>
+    <div className="rv-page">
 
-      {/* Corrections badge */}
-      {hasCorrections && (
-        <div
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: 'rgba(255,69,58,0.09)', border: '1px solid rgba(255,69,58,0.3)',
-            borderRadius: 50, padding: '5px 12px',
-            fontSize: 12, fontWeight: 700, color: 'var(--danger)',
-            marginBottom: 16, cursor: 'pointer',
-          }}
-          onClick={() => setActiveTab(0)}
+      {/* ── Sticky header ── */}
+      <div className="rv-header">
+        <button className="rv-back-btn" onClick={onBack} aria-label={isJapanese ? '戻る' : 'Back'}>
+          ‹
+        </button>
+        <p className="rv-title">{title}</p>
+        <button
+          className={`rv-share-btn${copied ? ' copied' : ''}`}
+          onClick={handleShare}
+          aria-label={isJapanese ? '共有' : 'Share'}
         >
-          ⚠️ {content.corrections.length} {isJapanese ? '件の修正あり — 解説で確認' : `correction${content.corrections.length > 1 ? 's' : ''} found — see Simple tab`}
-        </div>
-      )}
-
-      {/* Share */}
-      <div className="share-card-preview" aria-label={isJapanese ? '共有カードのプレビュー' : 'Share card preview'}>
-        <div className="share-card-preview-top">
-          <div>
-            <div className="share-card-brand">{brandLabel}</div>
-            <div className="share-card-kicker">{isJapanese ? 'Study Pack' : 'Study Pack'}</div>
-          </div>
-          <div className="share-card-badge">{isJapanese ? 'Exam Pack' : 'Exam Pack'}</div>
-        </div>
-
-        {subjectLabel && (
-          <div className="share-card-subject">
-            {subjectLabel}
-          </div>
-        )}
-
-        <div className="share-card-title">{shareTitle}</div>
-        <div className="share-card-summary">
-          <FuriganaText text={shareLead} furigana={furigana} />
-        </div>
-
-        {!!shareTopics.length && (
-          <div className="share-card-topics">
-            {shareTopics.map((topic, idx) => (
-              <div key={idx} className="share-card-topic">
-                <span className="share-card-topic-dot">✦</span>
-                <FuriganaText text={topic} furigana={furigana} />
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="share-card-footer">
-          <div className="share-card-generated">{isJapanese ? 'Generated by PassAI' : 'Generated by PassAI'}</div>
-          <img src="/mascot/mascot-reading.png" alt="" aria-hidden="true" className="share-card-mascot" />
-        </div>
-      </div>
-
-      <div className="share-row results-share-row">
-        <button className={`share-btn ${copied ? 'copied' : ''}`} onClick={handleShare}>
-          {copied
-            ? (isJapanese ? '✓ コピー済み' : '✓ Copied!')
-            : (navigator.share
-                ? (isJapanese ? '↑ 共有する' : '↑ Share')
-                : (isJapanese ? '📋 コピー' : '📋 Copy'))}
+          {copied ? '✓' : (navigator.share ? '↑' : '📋')}
         </button>
       </div>
 
-      {/* Pill tabs */}
-      <div className="pill-tabs results-tabs" style={{ marginBottom: 24 }}>
-        {tabDefs.map((t, i) => (
+      {/* ── Stats row ── */}
+      {stats.length > 0 && (
+        <div className="rv-stats">
+          {stats.map((s, i) => (
+            <div key={i} className="rv-stat-chip">
+              <span className="rv-stat-num">{s.num}</span>
+              <span className="rv-stat-label">{s.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Tab bar ── */}
+      <div className="rv-tabs">
+        {tabDefs.map(({ label, pro }, i) => (
           <button
-            key={t}
-            className={`pill-tab ${activeTab === i ? 'active' : ''}`}
+            key={label}
+            className={`rv-tab${activeTab === i ? ' active' : ''}`}
             onClick={() => setActiveTab(i)}
           >
-            {t}
-            {i === 0 && hasCorrections && (
-              <span style={{ marginLeft: 5, color: 'var(--danger)' }}>•</span>
-            )}
-            {i === 4 && (
-              <span style={{ marginLeft: 4, fontSize: 10, color: 'var(--color-amber)', fontWeight: 700 }}>PRO</span>
-            )}
+            {label}
+            {pro && <span className="rv-tab-pro-badge">PRO</span>}
           </button>
         ))}
       </div>
 
-      {activeTab === 0 && (
-        <SimpleTab
-          summary={content.summary}
-          highlightStat={content.highlightStat}
-          simpleExplanation={content.simpleExplanation}
-          thinkingQuestions={content.thinkingQuestions}
-          corrections={content.corrections}
-          illustrationQuery={content.illustrationQuery}
-          furigana={furigana}
-          isJapanese={isJapanese}
-        />
-      )}
-      {activeTab === 1 && (
-        <OverviewTab
-          summary={content.summary}
-          keyTopics={content.keyTopics}
-          furigana={furigana}
-          isJapanese={isJapanese}
-        />
-      )}
-      {activeTab === 2 && (
-        <FlashcardsTab cards={content.flashcards} furigana={furigana} isJapanese={isJapanese} contentId={contentId} />
-      )}
-      {activeTab === 3 && (
-        <QuizTab
-          questions={content.quiz}
-          thinkingQuestions={content.thinkingQuestions}
-          furigana={furigana}
-          isJapanese={isJapanese}
-          contentId={contentId}
-        />
-      )}
-      {activeTab === 4 && (
-        <ExamTab
-          originalInput={originalInput}
-          furigana={furigana}
-          isJapanese={isJapanese}
-          contentId={contentId}
-          onUpgrade={onUpgrade}
-        />
-      )}
+      {/* ── Tab content ── */}
+      <div className="rv-content">
+        {activeTab === 0 && (
+          <SimpleTab
+            summary={content.summary}
+            highlightStat={content.highlightStat}
+            simpleExplanation={content.simpleExplanation}
+            thinkingQuestions={content.thinkingQuestions}
+            illustrationQuery={content.illustrationQuery}
+            furigana={furigana}
+            isJapanese={isJapanese}
+          />
+        )}
+        {activeTab === 1 && (
+          <OverviewTab
+            summary={content.summary}
+            keyTopics={content.keyTopics}
+            furigana={furigana}
+            isJapanese={isJapanese}
+          />
+        )}
+        {activeTab === 2 && (
+          <FlashcardsTab
+            cards={content.flashcards}
+            furigana={furigana}
+            isJapanese={isJapanese}
+            contentId={contentId}
+          />
+        )}
+        {activeTab === 3 && (
+          <QuizTab
+            questions={content.quiz}
+            thinkingQuestions={content.thinkingQuestions}
+            furigana={furigana}
+            isJapanese={isJapanese}
+            contentId={contentId}
+          />
+        )}
+        {activeTab === 4 && (
+          <ExamTab
+            originalInput={originalInput}
+            furigana={furigana}
+            isJapanese={isJapanese}
+            contentId={contentId}
+            onUpgrade={onUpgrade}
+          />
+        )}
+      </div>
+
     </div>
   );
 }

@@ -103,7 +103,7 @@ export default function UpgradeModal({
             className="btn btn-primary upgrade-modal-primary"
             onClick={() => (onUpgrade ? onUpgrade() : onClose())}
           >
-            {isJapanese ? 'Proにアップグレード — ¥800/月' : 'Upgrade to Pro — ¥800/month'}
+            {isJapanese ? 'Proにアップグレード — ¥780/月' : 'Upgrade to Pro — ¥780/month'}
           </button>
           <button
             className="btn btn-ghost"

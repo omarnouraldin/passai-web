@@ -131,7 +131,7 @@ export default function HomeView({
 
         {/* ── Header ── */}
         <div className="hv-header">
-          <div>
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
             <p className="hv-greeting">{getGreeting(isJapanese)}</p>
             <p className="hv-name">{displayName}</p>
           </div>
@@ -163,7 +163,7 @@ export default function HomeView({
             {user && !isPro && (
               <div className="hv-usage-card">
                 <div className="hv-usage-top">
-                  <div>
+                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
                     <p className="hv-usage-label">{isJapanese ? '無料プラン' : 'Free plan'}</p>
                     <p className="hv-usage-count">
                       {isJapanese
@@ -190,7 +190,7 @@ export default function HomeView({
                   <div className={`hv-bar-fill${nearLimit ? ' danger' : ''}`} style={{ width: `${barPct}%` }} />
                 </div>
                 <button className="hv-upgrade-cta" onClick={onUpgrade}>
-                  👑 {isJapanese ? 'Proにアップグレード · ¥800/月' : 'Upgrade to Pro · ¥800/month'}
+                  👑 {isJapanese ? 'Proにアップグレード · ¥780/月' : 'Upgrade to Pro · ¥780/month'}
                 </button>
               </div>
             )}
@@ -296,7 +296,7 @@ export default function HomeView({
                     : 'Unlimited generations, GPT-4 accuracy, and priority processing for deeper daily study.'}
                 </p>
                 <button className="hv-bottom-upgrade-btn" onClick={onUpgrade}>
-                  {isJapanese ? 'Proにアップグレード · ¥800/月' : 'Upgrade to Pro · ¥800/month'}
+                  {isJapanese ? 'Proにアップグレード · ¥780/月' : 'Upgrade to Pro · ¥780/month'}
                 </button>
               </div>
             )}

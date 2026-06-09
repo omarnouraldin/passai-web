@@ -5795,6 +5795,7 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
   max-width: 540px;
   margin: 0 auto;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Header */
@@ -5809,12 +5810,18 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
   font-size: 13px;
   color: var(--text-2);
   margin: 0 0 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .hv-name {
   font-size: 22px;
   font-weight: 700;
   color: var(--text);
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .hv-header-right {
   display: flex;
@@ -5877,6 +5884,7 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
   font-weight: 600;
   color: var(--text);
   margin: 0;
+  overflow-wrap: break-word;
 }
 .hv-ring-wrap {
   width: 48px;
@@ -5949,6 +5957,7 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
   font-size: 14px;
   color: var(--text-2);
   margin: 0;
+  overflow-wrap: break-word;
 }
 .hv-manage-btn {
   background: transparent;
@@ -6701,8 +6710,21 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
     padding-right: 14px;
   }
 
-  .hv-name  { font-size: 18px; }
-  .hv-usage-count { font-size: 13px; }
+  /* Header: shrink buttons so name has more room */
+  .hv-icon-btn, .hv-avatar {
+    width: 38px;
+    height: 38px;
+    font-size: 14px;
+  }
+  .hv-header-right { gap: 8px; }
+  .hv-name         { font-size: 19px; }
+  .hv-usage-count  { font-size: 13px; }
+
+  /* Usage card: let text wrap naturally */
+  .hv-usage-top { gap: 10px; }
+
+  /* Upgrade CTA: tighter text */
+  .hv-upgrade-cta { font-size: 13px; padding: 8px; }
 
   /* Stack options rows that have language/badge content */
   .uv-options-row {
@@ -6740,6 +6762,12 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
     padding-right: 12px;
   }
 
+  /* Header: even more compact */
+  .hv-icon-btn, .hv-avatar { width: 34px; height: 34px; }
+  .hv-name    { font-size: 17px; }
+  .hv-greeting { font-size: 12px; }
+  .hv-header  { margin-bottom: 16px; }
+
   .hv-generate-btn,
   .uv-generate-btn {
     font-size: 14px;
@@ -6749,8 +6777,11 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
   .uv-drop-btns    { flex-direction: column; align-items: center; }
   .uv-drop-btn     { width: 100%; max-width: 220px; justify-content: center; }
 
-  .hv-upgrade-cta  { font-size: 12px; }
+  .hv-upgrade-cta       { font-size: 12px; }
   .hv-bottom-upgrade-btn { font-size: 12px; }
+  .hv-recent-card        { padding: 10px 12px; gap: 10px; }
+  .hv-usage-card         { padding: 14px; }
+  .hv-ring-wrap          { width: 40px; height: 40px; }
 }
 
 /* Ensure bottom nav tabs have proper touch area on all sizes */

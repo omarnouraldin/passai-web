@@ -478,7 +478,7 @@ export default function LandingPage({
           <div className="lp-pricing-card lp-featured lp-reveal lp-d1">
             <div className="lp-pricing-popular">{isJa ? '人気' : 'Most popular'}</div>
             <div className="lp-pricing-tier">Pro</div>
-            <div className="lp-pricing-price">¥980</div>
+            <div className="lp-pricing-price">¥780</div>
             {copy.proItems.map(item => (
               <div key={item.label} className="lp-pricing-item">
                 <span className="lp-pricing-check">✓</span>

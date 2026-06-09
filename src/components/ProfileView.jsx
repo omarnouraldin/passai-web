@@ -81,7 +81,7 @@ export default function ProfileView({
                 : 'Unlimited generations, GPT-4 accuracy, priority processing'}
             </p>
             <button className="pv-upgrade-btn" onClick={onUpgrade}>
-              {isJapanese ? 'アップグレード · ¥800/月' : 'Upgrade to Pro · ¥800/month'}
+              {isJapanese ? 'アップグレード · ¥780/月' : 'Upgrade to Pro · ¥780/month'}
             </button>
           </div>
         </div>
@@ -94,7 +94,7 @@ export default function ProfileView({
             <span className="pv-settings-icon">💳</span>
             <div className="pv-settings-body">
               <p className="pv-settings-label">{isJapanese ? 'サブスクリプション' : 'Subscription'}</p>
-              <p className="pv-settings-sub">{isJapanese ? 'Proプラン · ¥800/月' : 'Pro plan · ¥800/month'}</p>
+              <p className="pv-settings-sub">{isJapanese ? 'Proプラン · ¥780/月' : 'Pro plan · ¥780/month'}</p>
             </div>
             <div className="pv-settings-right">
               <button className="pv-billing-btn" onClick={onManageBilling}>

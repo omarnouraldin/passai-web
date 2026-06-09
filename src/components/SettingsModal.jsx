@@ -15,7 +15,7 @@ export default function SettingsModal({
   onOpenSupport,
 }) {
   const { user, isPro, isAdmin, generationsUsed, signOut, enabled } = useAuth();
-  const FREE_LIMIT = 5;
+  const FREE_LIMIT = 2;
   const usagePct   = Math.min(100, (generationsUsed / FREE_LIMIT) * 100);
   const usageColor = usagePct >= 100 ? 'var(--color-red)' : usagePct >= 60 ? 'var(--color-amber)' : 'var(--accent)';
   const planStatus = isPro ? (isJapanese ? 'Proプラン' : 'Pro plan') : (isJapanese ? 'Freeプラン' : 'Free plan');

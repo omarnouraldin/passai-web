@@ -16,7 +16,7 @@ export default function ProfileView({
   onBack,
 }) {
   const { user, isPro, isAdmin, generationsUsed, signOut, enabled } = useAuth();
-  const FREE_LIMIT = 5;
+  const FREE_LIMIT = 2;
   const usedCapped = Math.min(generationsUsed, FREE_LIMIT);
   const usagePct   = Math.round((usedCapped / FREE_LIMIT) * 100);
   const nearLimit  = generationsUsed >= FREE_LIMIT - 1;
@@ -77,8 +77,8 @@ export default function ProfileView({
             </div>
             <p className="pv-upgrade-sub">
               {isJapanese
-                ? '無制限の生成・高精度GPT-4・優先処理'
-                : 'Unlimited generations, GPT-4 accuracy, priority processing'}
+                ? '月30回・高精度GPT-4・優先処理'
+                : '30 generations/month, GPT-4 accuracy, priority processing'}
             </p>
             <button className="pv-upgrade-btn" onClick={onUpgrade}>
               {isJapanese ? 'アップグレード · ¥780/月' : 'Upgrade to Pro · ¥780/month'}

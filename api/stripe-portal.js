@@ -35,8 +35,11 @@ export default async function handler(req, res) {
   if (!isPlainObject(req.body)) return res.status(400).json({ error: 'Malformed JSON body.' });
 
   const authHeader = req.headers.authorization ?? '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No authorization token provided. Please sign in again.' });
+  }
   const user = await getAuthedUser(authHeader);
-  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (!user) return res.status(401).json({ error: 'Session expired. Please sign out and sign in again.' });
 
   const profileClient = getSupabaseServiceClient();
   if (!profileClient) return res.status(500).json({ error: 'Missing SUPABASE_SERVICE_ROLE_KEY' });
@@ -54,7 +57,7 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Billing portal is only available for Pro users.' });
   }
   if (!profile?.stripe_customer_id) {
-    return res.status(400).json({ error: 'No Stripe customer found for this account.' });
+    return res.status(400).json({ error: 'No billing record found. If you upgraded via the admin panel, please subscribe through the normal upgrade flow to access billing.' });
   }
 
   const { stripeSecret, appBaseUrl } = getEnv(req);

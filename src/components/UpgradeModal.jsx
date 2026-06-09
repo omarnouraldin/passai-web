@@ -1,4 +1,4 @@
-const FREE_LIMIT = 5;
+const FREE_LIMIT = 2;
 
 export default function UpgradeModal({
   used = 5,
@@ -14,11 +14,11 @@ export default function UpgradeModal({
     ? resetDate.toLocaleDateString(isJapanese ? 'ja-JP' : 'en-US', { month: 'long', day: 'numeric' })
     : null;
   const freeItems = isJapanese
-    ? ['月5回の生成', '標準AI', '要約・フラッシュカード・クイズ', '基本OCR/アップロード']
-    : ['5 generations/month', 'Standard AI', 'Summary + Flashcards + Quiz', 'Basic OCR/upload'];
+    ? ['月2回の生成', 'GPT-5.4 Mini', '要約・フラッシュカード・クイズ', '最大10ページPDF']
+    : ['2 generations/month', 'GPT-5.4 Mini', 'Summary + Flashcards + Quiz', 'Max 10-page PDFs'];
   const proItems = isJapanese
-    ? ['無制限の生成', '高度AI推論', '試験モード', '難しい内容への強い対応', '今後の機能を優先利用']
-    : ['Unlimited generations', 'Advanced AI reasoning', 'Exam Mode', 'Better difficult-subject support', 'Priority future features'];
+    ? ['月30回の生成', 'GPT-5.4', '試験モード', '最大50ページPDF', '優先処理']
+    : ['30 generations/month', 'GPT-5.4 model', 'Exam Mode', 'Max 50-page PDFs', 'Priority processing'];
 
   return (
     <div style={{

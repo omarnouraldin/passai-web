@@ -83,7 +83,7 @@ export default function HomeView({
   onOpenSupport,
 }) {
   const { user, isPro, isAdmin, generationsUsed, enabled, getAccessToken, refreshProfile } = useAuth();
-  const FREE_LIMIT = 5;
+  const FREE_LIMIT = 2;
   const brand = getBrandWordmark(isJapanese);
 
   const [showSettings, setShowSettings] = useState(false);
@@ -202,7 +202,7 @@ export default function HomeView({
                 <div className="hv-pro-text">
                   <p className="hv-pro-plan-label">{isJapanese ? 'Proプラン' : 'Pro plan'}</p>
                   <p className="hv-pro-plan-desc">
-                    {isJapanese ? '無制限の生成・高精度AI' : 'Unlimited generations · High-accuracy AI'}
+                    {isJapanese ? '月30回・高精度AI' : '30 generations/month · High-accuracy AI'}
                   </p>
                 </div>
                 <button className="hv-manage-btn" onClick={onManageBilling}>
@@ -292,8 +292,8 @@ export default function HomeView({
                 </div>
                 <p className="hv-bottom-upgrade-sub">
                   {isJapanese
-                    ? '無制限の生成・高精度GPT-4・優先処理で毎日の勉強をもっと深く。'
-                    : 'Unlimited generations, GPT-4 accuracy, and priority processing for deeper daily study.'}
+                    ? '月30回・高精度GPT-4・優先処理で毎日の勉強をもっと深く。'
+                    : '30 generations/month, GPT-4 accuracy, and priority processing for deeper daily study.'}
                 </p>
                 <button className="hv-bottom-upgrade-btn" onClick={onUpgrade}>
                   {isJapanese ? 'Proにアップグレード · ¥780/月' : 'Upgrade to Pro · ¥780/month'}

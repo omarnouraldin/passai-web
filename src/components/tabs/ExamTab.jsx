@@ -94,7 +94,7 @@ function ProGate({ isJapanese, onUpgrade }) {
           <li>{isJapanese ? '混合形式の模擬試験' : 'Full mixed-format mock exams'}</li>
           <li>{isJapanese ? 'AI による短答採点' : 'AI-graded short answer questions'}</li>
           <li>{isJapanese ? 'より高度な AI 理解' : 'Advanced AI explanations'}</li>
-          <li>{isJapanese ? '無制限の生成' : 'Unlimited generations'}</li>
+          <li>{isJapanese ? '月30回の生成' : '30 generations/month'}</li>
         </ul>
       </div>
       <button className="btn btn-primary" style={{ width: '100%', maxWidth: 280 }}

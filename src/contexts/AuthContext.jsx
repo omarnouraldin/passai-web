@@ -144,9 +144,14 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut();
   }
 
-  // Get the current access token (for passing to API requests)
+  // Get the current access token (for passing to API requests).
+  // Always refreshes the session first so the JWT is never expired server-side.
   async function getAccessToken() {
     if (!SUPABASE_ENABLED || !supabase) return null;
+    // refreshSession returns the refreshed session, or null on failure.
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    if (refreshed?.session?.access_token) return refreshed.session.access_token;
+    // Fallback: read from storage (covers cases where refresh isn't needed)
     const { data: { session } } = await supabase.auth.getSession();
     return session?.access_token ?? null;
   }

@@ -73,6 +73,10 @@ html, body, #root {
   transition: background 0.2s, color 0.2s;
 }
 
+/* Prevent any child from causing horizontal page scroll */
+html { overflow-x: hidden; }
+body { overflow-x: hidden; max-width: 100vw; }
+
 /* ─────────────────────────────────────────
    Layout
 ───────────────────────────────────────── */
@@ -80,6 +84,8 @@ html, body, #root {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .landing-page {
@@ -5791,11 +5797,13 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
    HomeView redesign  (hv-  prefix)
 ───────────────────────────────────────────────────────────── */
 .hv-page {
-  padding: calc(20px + var(--safe-top)) 16px calc(84px + var(--safe-bottom));
+  width: 100%;
   max-width: 540px;
+  padding: calc(20px + var(--safe-top)) 16px calc(84px + var(--safe-bottom));
   margin: 0 auto;
   min-height: 100vh;
   overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 /* Header */
@@ -5867,6 +5875,9 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
   border-radius: var(--radius);
   padding: 16px;
   margin-bottom: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .hv-usage-top {
   display: flex;
@@ -5943,6 +5954,9 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .hv-pro-text { flex: 1; min-width: 0; }
 .hv-pro-plan-label {
@@ -5954,10 +5968,12 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
   margin: 0 0 2px;
 }
 .hv-pro-plan-desc {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-2);
   margin: 0;
   overflow-wrap: break-word;
+  word-break: break-word;
+  min-width: 0;
 }
 .hv-manage-btn {
   background: transparent;
@@ -6189,6 +6205,7 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
 /* Generate button */
 .hv-generate-btn {
   width: 100%;
+  box-sizing: border-box;
   background: var(--accent);
   border: none;
   border-radius: var(--radius);
@@ -6221,6 +6238,9 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
   margin-bottom: 8px;
   cursor: pointer;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   text-align: left;
   transition: background 0.15s, border-color 0.15s;
 }
@@ -6250,6 +6270,9 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
 
 /* Bottom upgrade block */
 .hv-bottom-upgrade {
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   background: var(--accent-dim);
   border: 1px solid var(--accent-glow);
   border-radius: var(--radius);
@@ -7125,4 +7148,10 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
 }
 .rv-content .topic-chip {
   font-size: 14px;
+}
+
+/* Hard cap: nothing inside hv-page can exceed its content width */
+.hv-page > * {
+  max-width: 100%;
+  box-sizing: border-box;
 }

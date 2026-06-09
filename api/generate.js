@@ -10,7 +10,7 @@ export const config = {
   },
 };
 
-const FREE_LIMIT = 5;
+const FREE_LIMIT = 2;
 const ADMIN_EMAIL = 'omarnourelden3@gmail.com';
 const DEV_LOGS = process.env.NODE_ENV !== 'production';
 

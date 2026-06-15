@@ -7,6 +7,7 @@ export default function ProfileView({
   onUpgrade,
   stripeLoading,
   onManageBilling,
+  billingLoading,
   onOpenPricing,
   onOpenPrivacy,
   onOpenTerms,
@@ -98,8 +99,8 @@ export default function ProfileView({
               <p className="pv-settings-sub">{isJapanese ? 'Proプラン · ¥780/月' : 'Pro plan · ¥780/month'}</p>
             </div>
             <div className="pv-settings-right">
-              <button className="pv-billing-btn" onClick={onManageBilling}>
-                {isJapanese ? '管理' : 'Manage'}
+              <button className="pv-billing-btn" onClick={onManageBilling} disabled={billingLoading}>
+                {billingLoading ? '…' : (isJapanese ? '管理' : 'Manage')}
               </button>
             </div>
           </div>

@@ -71,6 +71,7 @@ export default function HomeView({
   onUpgrade,
   stripeLoading,
   onManageBilling,
+  billingLoading,
   recentHistory = [],
   onOpenHistoryItem,
   profileOpenSignal = 0,
@@ -206,8 +207,8 @@ export default function HomeView({
                     {isJapanese ? '月30回・高精度AI' : '30 generations/month · High-accuracy AI'}
                   </p>
                 </div>
-                <button className="hv-manage-btn" onClick={onManageBilling}>
-                  {isJapanese ? '管理' : 'Manage'}
+                <button className="hv-manage-btn" onClick={onManageBilling} disabled={billingLoading}>
+                  {billingLoading ? '…' : (isJapanese ? '管理' : 'Manage')}
                 </button>
               </div>
             )}

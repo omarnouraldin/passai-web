@@ -111,6 +111,7 @@ function AppInner() {
   const [abortCtrl,     setAbortCtrl]   = useState(null);
   const [upgradeData,   setUpgradeData] = useState(null); // { used, limit, resetAt }
   const [stripeLoading, setStripeLoading] = useState(false);
+  const [billingLoading, setBillingLoading] = useState(false);
   const [showAuth,      setShowAuth]    = useState(false);
   const [profileOpenSignal, setProfileOpenSignal] = useState(0);
   const [page,          setPage]        = useState(() => (
@@ -441,7 +442,9 @@ function AppInner() {
       setShowAuth(true);
       return;
     }
+    if (billingLoading) return;
 
+    setBillingLoading(true);
     try {
       const token = await getAccessToken();
       if (!token) {
@@ -463,6 +466,8 @@ function AppInner() {
       window.location.assign(data.url);
     } catch (err) {
       showToast(err?.message ?? 'Could not open billing portal', 'error');
+    } finally {
+      setBillingLoading(false);
     }
   }
 
@@ -534,6 +539,7 @@ function AppInner() {
           onUpgrade={startCheckout}
           stripeLoading={stripeLoading}
           onManageBilling={openBillingPortal}
+          billingLoading={billingLoading}
           recentHistory={history}
           onOpenHistoryItem={openHistoryItem}
           profileOpenSignal={profileOpenSignal}
@@ -568,6 +574,7 @@ function AppInner() {
           onUpgrade={startCheckout}
           stripeLoading={stripeLoading}
           onManageBilling={openBillingPortal}
+          billingLoading={billingLoading}
           onOpenPricing={openPricing}
           onOpenPrivacy={() => navigateTo('privacy')}
           onOpenTerms={() => navigateTo('terms')}

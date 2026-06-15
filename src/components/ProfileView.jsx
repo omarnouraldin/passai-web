@@ -5,6 +5,7 @@ export default function ProfileView({
   furigana, setFurigana,
   isJapanese,
   onUpgrade,
+  stripeLoading,
   onManageBilling,
   onOpenPricing,
   onOpenPrivacy,
@@ -80,8 +81,8 @@ export default function ProfileView({
                 ? '月30回・高精度GPT-4・優先処理'
                 : '30 generations/month, GPT-4 accuracy, priority processing'}
             </p>
-            <button className="pv-upgrade-btn" onClick={onUpgrade}>
-              {isJapanese ? 'アップグレード · ¥780/月' : 'Upgrade to Pro · ¥780/month'}
+            <button className="pv-upgrade-btn" onClick={onUpgrade} disabled={stripeLoading}>
+              {stripeLoading ? (isJapanese ? '処理中…' : 'Loading…') : (isJapanese ? 'アップグレード · ¥780/月' : 'Upgrade to Pro · ¥780/month')}
             </button>
           </div>
         </div>

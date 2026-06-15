@@ -110,6 +110,7 @@ function AppInner() {
   const [toast,         setToast]       = useState(null);
   const [abortCtrl,     setAbortCtrl]   = useState(null);
   const [upgradeData,   setUpgradeData] = useState(null); // { used, limit, resetAt }
+  const [stripeLoading, setStripeLoading] = useState(false);
   const [showAuth,      setShowAuth]    = useState(false);
   const [profileOpenSignal, setProfileOpenSignal] = useState(0);
   const [page,          setPage]        = useState(() => (
@@ -406,7 +407,9 @@ function AppInner() {
       setShowAuth(true);
       return;
     }
+    if (stripeLoading) return;
 
+    setStripeLoading(true);
     try {
       const token = await getAccessToken();
       if (!token) {
@@ -428,6 +431,8 @@ function AppInner() {
       window.location.assign(data.url);
     } catch (err) {
       showToast(err?.message ?? 'Checkout failed', 'error');
+    } finally {
+      setStripeLoading(false);
     }
   }
 
@@ -499,6 +504,7 @@ function AppInner() {
           onBack={openLanding}
           onStartFree={startFreeFlow}
           onUpgrade={startCheckout}
+          stripeLoading={stripeLoading}
           onLocaleChange={setLocale}
           onOpenPrivacy={() => navigateTo('privacy')}
           onOpenTerms={() => navigateTo('terms')}
@@ -526,6 +532,7 @@ function AppInner() {
           setFurigana={setFurigana}
           isJapanese={isJapanese}
           onUpgrade={startCheckout}
+          stripeLoading={stripeLoading}
           onManageBilling={openBillingPortal}
           recentHistory={history}
           onOpenHistoryItem={openHistoryItem}
@@ -559,6 +566,7 @@ function AppInner() {
           setFurigana={setFurigana}
           isJapanese={isJapanese}
           onUpgrade={startCheckout}
+          stripeLoading={stripeLoading}
           onManageBilling={openBillingPortal}
           onOpenPricing={openPricing}
           onOpenPrivacy={() => navigateTo('privacy')}
@@ -632,8 +640,8 @@ function AppInner() {
           resetAt={upgradeData.resetAt}
           isJapanese={isJapanese}
           onClose={() => setUpgradeData(null)}
-          onUpgrade={startCheckout}
-          onOpenPricing={openPricing}
+          onUpgrade={() => { setUpgradeData(null); startCheckout(); }}
+          onOpenPricing={() => { setUpgradeData(null); openPricing(); }}
         />
       )}
 

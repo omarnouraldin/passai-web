@@ -69,6 +69,7 @@ export default function HomeView({
   furigana, setFurigana,
   isJapanese,
   onUpgrade,
+  stripeLoading,
   onManageBilling,
   recentHistory = [],
   onOpenHistoryItem,
@@ -189,8 +190,8 @@ export default function HomeView({
                 <div className="hv-bar">
                   <div className={`hv-bar-fill${nearLimit ? ' danger' : ''}`} style={{ width: `${barPct}%` }} />
                 </div>
-                <button className="hv-upgrade-cta" onClick={onUpgrade}>
-                  👑 {isJapanese ? 'Proにアップグレード · ¥780/月' : 'Upgrade to Pro · ¥780/month'}
+                <button className="hv-upgrade-cta" onClick={onUpgrade} disabled={stripeLoading}>
+                  {stripeLoading ? (isJapanese ? '処理中…' : 'Loading…') : `👑 ${isJapanese ? 'Proにアップグレード · ¥780/月' : 'Upgrade to Pro · ¥780/month'}`}
                 </button>
               </div>
             )}
@@ -295,8 +296,8 @@ export default function HomeView({
                     ? '月30回・高精度GPT-4・優先処理で毎日の勉強をもっと深く。'
                     : '30 generations/month, GPT-4 accuracy, and priority processing for deeper daily study.'}
                 </p>
-                <button className="hv-bottom-upgrade-btn" onClick={onUpgrade}>
-                  {isJapanese ? 'Proにアップグレード · ¥780/月' : 'Upgrade to Pro · ¥780/month'}
+                <button className="hv-bottom-upgrade-btn" onClick={onUpgrade} disabled={stripeLoading}>
+                  {stripeLoading ? (isJapanese ? '処理中…' : 'Loading…') : (isJapanese ? 'Proにアップグレード · ¥780/月' : 'Upgrade to Pro · ¥780/month')}
                 </button>
               </div>
             )}

@@ -386,7 +386,7 @@ export default function UploadView({
             ‹
           </button>
           <h1 className="uv-title">
-            {isJapanese ? '新しい学習パック' : 'New exam pack'}
+            {isJapanese ? '新しい学習パック' : 'New study pack'}
           </h1>
         </div>
 
@@ -526,7 +526,7 @@ export default function UploadView({
           disabled={!canGenerate || overLimit}
           onClick={handleGenerate}
         >
-          ✨ {isJapanese ? '学習パックを生成する' : 'Generate Exam Pack'}
+          ✨ {isJapanese ? '学習パックを生成する' : 'Generate Study Pack'}
         </button>
 
       </div>

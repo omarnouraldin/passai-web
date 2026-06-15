@@ -13,9 +13,8 @@ const CONTENT = {
     heroCta: 'Try PassAI free',
     heroSecondary: 'Sign in / Sign up',
     pricingLink: 'View pricing',
-    statsStudents: 'students',
-    statsSec: 'avg gen time',
-    statsPass: 'pass rate',
+    earlyAccess: 'Now in early access',
+    earlyAccessSub: 'Be among the first students to try PassAI.',
     painTitle: 'Sound familiar?',
     pains: [
       { icon: '🌙', bg: 'rgba(248,113,113,0.15)', title: 'The night-before panic', body: '"200 pages of notes. Exam is at 9am."' },
@@ -39,18 +38,12 @@ const CONTENT = {
     furiganaTitle: 'Built for international students',
     furiganaSub: 'PassAI adds furigana to Japanese academic terms automatically — focus on understanding, not decoding.',
     furiganaLabel: 'Example — actual PassAI output',
-    testiTitle: 'What students say',
-    testimonials: [
-      { av: 'YK', name: 'Yuki K. — Waseda University',  stars: '★★★★★', quote: '"I used to spend 3 hours making flashcards. Now I upload my notes and they\'re ready in 30 seconds. I actually have time to study."' },
-      { av: 'MS', name: 'Mei S. — Keio University',     stars: '★★★★★', quote: '"The furigana feature is incredible. I finally understand academic Japanese without stopping every sentence to look things up."' },
-      { av: 'TR', name: 'Taro R. — Osaka University',   stars: '★★★★★', quote: '"Exam mode feels exactly like the real thing. Used it the night before finals and passed everything."' },
-    ],
     pricingTitle: 'Simple pricing',
     pricingSub: 'Start free. Upgrade when you need more.',
     freeItems: [{ ok: true, label: '2 packs / month' }, { ok: true, label: 'GPT-5.4 Mini' }, { ok: false, label: 'No exam mode' }],
     proItems:  [{ ok: true, label: '30 packs / month' }, { ok: true, label: 'GPT-5.4 model' }, { ok: true, label: 'Exam mode' }],
     finalTitle: 'Ready to study smarter?',
-    finalSub: 'Join students who prep without the panic.',
+    finalSub: 'Join early users and shape what PassAI becomes.',
     finalCta: 'Get started free',
     footer: { privacy: 'Privacy', terms: 'Terms', contact: 'Support' },
   },
@@ -64,9 +57,8 @@ const CONTENT = {
     heroCta: '無料で始める',
     heroSecondary: 'サインイン / 新規登録',
     pricingLink: '料金を見る',
-    statsStudents: '人が利用',
-    statsSec: '平均生成時間',
-    statsPass: '合格率',
+    earlyAccess: 'アーリーアクセス公開中',
+    earlyAccessSub: 'PassAIをいち早く体験する学生になろう。',
     painTitle: '思い当たりませんか？',
     pains: [
       { icon: '🌙', bg: 'rgba(248,113,113,0.15)', title: '前日の焦り',     body: '"試験まで200ページのノートが残っている。"' },
@@ -90,18 +82,12 @@ const CONTENT = {
     furiganaTitle: '留学生にも使いやすい',
     furiganaSub: '専門用語にルビを自動追加。漢字の解読に時間を使わず、内容の理解に集中できます。',
     furiganaLabel: 'PassAI の出力例',
-    testiTitle: '学生の声',
-    testimonials: [
-      { av: 'YK', name: 'Yuki K. — 早稲田大学',   stars: '★★★★★', quote: '"フラッシュカード作成に3時間かかっていたのが、今は30秒。本当に勉強する時間が生まれました。"' },
-      { av: 'MS', name: 'Mei S. — 慶應義塾大学', stars: '★★★★★', quote: '"ルビ機能がすごい。毎文立ち止まらずに学術的な日本語を理解できるようになりました。"' },
-      { av: 'TR', name: 'Taro R. — 大阪大学',   stars: '★★★★★', quote: '"試験モードは本番そっくり。期末前夜に使って全科目合格できました。"' },
-    ],
     pricingTitle: 'シンプルな料金',
     pricingSub: '無料から始めて、必要なときにアップグレード。',
     freeItems: [{ ok: true, label: '月2パック' }, { ok: true, label: 'GPT-5.4 Mini' }, { ok: false, label: '試験モードなし' }],
     proItems:  [{ ok: true, label: '月30パック' }, { ok: true, label: 'GPT-5.4モデル' }, { ok: true, label: '試験モード' }],
     finalTitle: 'スマートに勉強する準備はできましたか？',
-    finalSub: '焦らず試験に挑む学生に加わりましょう。',
+    finalSub: 'アーリーユーザーとして、PassAI の進化に参加しよう。',
     finalCta: '無料で始める',
     footer: { privacy: 'プライバシー', terms: '利用規約', contact: 'サポート' },
   },
@@ -229,17 +215,12 @@ export default function LandingPage({
 
   const containerRef = useRef(null);
   const headlineRef  = useRef(null);
-  const testiCardRef = useRef(null);
   const progFillRef  = useRef(null);
 
-  const [testiIdx, setTestiIdx] = useState(0);
-
   useScrollReveal(containerRef);
-  useCountUp(containerRef);
   useActiveOnScroll(containerRef, '.lp-pain-card');
   useActiveOnScroll(containerRef, '.lp-feature-card');
   useTypewriter(copy.heroLines, headlineRef);
-  useTestiRotator(copy.testimonials, testiCardRef, setTestiIdx);
 
   // Scroll progress bar
   useEffect(() => {
@@ -253,8 +234,6 @@ export default function LandingPage({
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
   }, []);
-
-  const testi = copy.testimonials[testiIdx];
 
   return (
     <div
@@ -341,19 +320,13 @@ export default function LandingPage({
         </div>
       </section>
 
-      {/* ── Stats ── */}
-      <div className="lp-stats-row" style={{ padding: '22px 20px' }}>
-        <div>
-          <div className="lp-stat-num" data-target="12" data-suffix="k+">—</div>
-          <div className="lp-stat-label">{copy.statsStudents}</div>
+      {/* ── Early access banner ── */}
+      <div className="lp-stats-row" style={{ padding: '22px 20px', flexDirection: 'column', gap: 4, textAlign: 'center' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          {copy.earlyAccess}
         </div>
-        <div>
-          <div className="lp-stat-num" data-target="30" data-suffix="s">—</div>
-          <div className="lp-stat-label">{copy.statsSec}</div>
-        </div>
-        <div>
-          <div className="lp-stat-num" data-target="94" data-suffix="%">—</div>
-          <div className="lp-stat-label">{copy.statsPass}</div>
+        <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
+          {copy.earlyAccessSub}
         </div>
       </div>
 
@@ -434,27 +407,6 @@ export default function LandingPage({
         </div>
       </section>
 
-      {/* ── Testimonials ── */}
-      <section style={{ padding: '26px 20px', borderTop: '1px solid var(--border)' }}>
-        <div className="lp-reveal" style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', marginBottom: 16 }}>
-          {copy.testiTitle}
-        </div>
-        <div ref={testiCardRef} className="lp-testimonial-card lp-reveal">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div className="lp-t-avatar">{testi.av}</div>
-            <div>
-              <div className="lp-t-name">{testi.name}</div>
-              <div className="lp-t-stars">{testi.stars}</div>
-            </div>
-          </div>
-          <div className="lp-t-quote">{testi.quote}</div>
-        </div>
-        <div className="lp-t-dots">
-          {copy.testimonials.map((_, i) => (
-            <div key={i} className={`lp-t-dot ${i === testiIdx ? 'lp-active' : ''}`} />
-          ))}
-        </div>
-      </section>
 
       {/* ── Pricing ── */}
       <section style={{ padding: '26px 20px', borderTop: '1px solid var(--border)' }}>

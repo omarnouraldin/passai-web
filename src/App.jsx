@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Component } from 'react';
 import HomeView from './components/HomeView.jsx';
 import UploadView from './components/UploadView.jsx';
 import ResultsView from './components/ResultsView.jsx';
@@ -51,6 +51,45 @@ function detectInitialLocale() {
   if (saved === 'en' || saved === 'ja') return saved;
   const browserLang = navigator.language?.toLowerCase() ?? '';
   return browserLang.startsWith('ja') ? 'ja' : 'en';
+}
+
+// ── Error boundary ────────────────────────────────────────────────────────────
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('[PassAI] Uncaught error:', error, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          justifyContent: 'center', minHeight: '100dvh', padding: '32px 24px',
+          textAlign: 'center', gap: 12,
+        }}>
+          <div style={{ fontSize: 40 }}>😵</div>
+          <p style={{ fontSize: 17, fontWeight: 600, color: 'var(--text)', margin: 0 }}>Something went wrong</p>
+          <p style={{ fontSize: 13, color: 'var(--text-2)', margin: 0 }}>
+            {this.state.error?.message ?? 'An unexpected error occurred.'}
+          </p>
+          <button
+            className="btn btn-primary"
+            style={{ marginTop: 12 }}
+            onClick={() => window.location.reload()}
+          >
+            Reload app
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 // ── Inner app (has access to auth context) ───────────────────────────────────
@@ -133,9 +172,9 @@ function AppInner() {
 
     refreshProfile();
     if (checkoutStatus === 'success') {
-      showToast(landingIsJapanese ? 'Stripe checkout completed' : 'Stripe checkout completed', 'success');
+      showToast(landingIsJapanese ? 'アップグレード完了！Proプランへようこそ 🎉' : 'Upgrade successful! Welcome to Pro 🎉', 'success');
     } else if (checkoutStatus === 'cancel') {
-      showToast(landingIsJapanese ? 'Checkout cancelled' : 'Checkout cancelled', 'error');
+      showToast(landingIsJapanese ? 'チェックアウトをキャンセルしました' : 'Checkout cancelled', 'error');
     }
 
     params.delete('checkout');
@@ -609,9 +648,11 @@ function AppInner() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <AppInner />
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <AppInner />
+        </AuthProvider>
+      </ErrorBoundary>
     </ThemeProvider>
   );
 }
